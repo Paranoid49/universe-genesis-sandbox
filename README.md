@@ -13,52 +13,19 @@
 - 输入或随机生成 seed。
 - 生成一个可复现宇宙。
 - 查看宇宙法则、时间线、生命潜力、文明命运与神话事件。
-- 未来支持造物主干预、奇迹系统、可视化宇宙观察台与宇宙图书馆。
-
-## 当前阶段
-
-当前项目已完成阶段 1：可复现宇宙卡片最小可用版本。
-
-已完成：
-
-- 项目愿景定义。
-- 核心玩法说明。
-- seed 确定性原则。
-- 宇宙法则分类。
-- 演进里程碑拆解。
-- MVP 范围锁定。
-- 暂不做清单。
-- 第一版页面结构。
-- 第一批宇宙模板列表。
-- 核心数据模块建议。
-- 阶段 1 实施规格。
-- Vite、React、TypeScript 网页应用。
-- 确定性 PRNG 与命名随机流。
-- 10 个宇宙模板。
-- `UniverseSummary`、`UniverseLaws`、`TimelineEvent` 类型。
-- 宇宙指标、结构化法则和 8 至 12 条关键纪元事件生成。
-- 分享码与分享链接复现。
-- 固定 seed 与 50 seed 冒烟测试。
-
-主要规格文档：
-
-- [docs/phase-0.md](docs/phase-0.md)
-- [docs/phase-1.md](docs/phase-1.md)
-- [docs/milestones.md](docs/milestones.md)
-- [docs/repository-readiness.md](docs/repository-readiness.md)
-
-## 仓库状态
-
-- 当前分支：`master`
-- 当前阶段：阶段 1 已实现，准备验收与提交
-- 开源协议：MIT，见 [LICENSE.md](LICENSE.md)
-- 协作规则：见 [CONTRIBUTING.md](CONTRIBUTING.md)
-- 安全报告：见 [SECURITY.md](SECURITY.md)
+- 通过分享码或链接复现同一个宇宙。
 
 ## 本地运行
 
+安装依赖：
+
 ```text
 npm install
+```
+
+启动开发服务器：
+
+```text
 npm run dev
 ```
 
@@ -69,11 +36,24 @@ npm test
 npm run build
 ```
 
-## 推荐下一步
+完整检查：
 
-1. 提交并推送阶段 1 产物。
-2. 基于固定 seed 做人工读感验收。
-3. 进入阶段 2：宇宙法则引擎。
+```text
+npm run check
+```
+
+## 项目文档
+
+- [阶段 0：概念规格与原型边界](docs/phase-0.md)
+- [阶段 1：可复现宇宙卡片最小可用版本](docs/phase-1.md)
+- [项目演进里程碑](docs/milestones.md)
+- [仓库就绪检查](docs/repository-readiness.md)
+- [贡献指南](CONTRIBUTING.md)
+- [安全策略](SECURITY.md)
+
+## 开源协议
+
+本项目使用 [MIT License](LICENSE.md)。
 
 ## 一句话
 
