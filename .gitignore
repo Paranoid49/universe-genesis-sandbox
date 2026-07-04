@@ -6,10 +6,15 @@ dist/
 build/
 .next/
 out/
+coverage/
+.vite/
+.turbo/
+.cache/
 
 # Local environment
 .env
 .env.*
+*.local
 
 # Logs
 *.log

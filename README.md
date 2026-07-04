@@ -36,6 +36,15 @@
 
 - [docs/phase-0.md](docs/phase-0.md)
 - [docs/milestones.md](docs/milestones.md)
+- [docs/repository-readiness.md](docs/repository-readiness.md)
+
+## 仓库状态
+
+- 当前分支：`master`
+- 当前阶段：阶段 0 已完成，准备进入阶段 1
+- 开源协议：MIT，见 [LICENSE.md](LICENSE.md)
+- 协作规则：见 [CONTRIBUTING.md](CONTRIBUTING.md)
+- 安全报告：见 [SECURITY.md](SECURITY.md)
 
 ## 推荐下一步
 
