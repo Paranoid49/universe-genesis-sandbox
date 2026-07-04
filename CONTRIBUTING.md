@@ -26,6 +26,8 @@ npm install
 npm run dev
 ```
 
+在启动它的可见终端中按 `Ctrl + C` 可关闭开发服务器。
+
 运行检查：
 
 ```text
