@@ -18,7 +18,20 @@
 ## Engineering
 
 - [x] 选择前端技术栈。
-- [ ] 设计确定性 PRNG 分支方案。
-- [ ] 定义核心 TypeScript 数据结构。
-- [ ] 建立第一版模拟模块目录。
-- [ ] 建立人工验收 seed 样本集。
+- [x] 设计确定性 PRNG 分支方案。
+- [x] 定义核心 TypeScript 数据结构。
+- [x] 建立第一版模拟模块目录。
+- [x] 建立人工验收 seed 样本集。
+
+## Phase 1
+
+- [x] 编写 `docs/phase-1.md`。
+- [x] 创建网页应用骨架。
+- [x] 实现 `rulesetVersion` 与 seed 标准化。
+- [x] 实现确定性 PRNG 与派生随机流。
+- [x] 实现 10 个宇宙模板。
+- [x] 实现 `UniverseSummary` 生成。
+- [x] 实现 8 至 12 条关键纪元事件。
+- [x] 实现第一版页面结构。
+- [x] 验证固定 seed 复现性。
+- [x] 验证 50 seed 冒烟测试。

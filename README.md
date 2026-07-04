@@ -17,7 +17,7 @@
 
 ## 当前阶段
 
-当前项目已完成阶段 0：概念规格与原型边界。
+当前项目已完成阶段 1：可复现宇宙卡片最小可用版本。
 
 已完成：
 
@@ -31,30 +31,49 @@
 - 第一版页面结构。
 - 第一批宇宙模板列表。
 - 核心数据模块建议。
+- 阶段 1 实施规格。
+- Vite、React、TypeScript 网页应用。
+- 确定性 PRNG 与命名随机流。
+- 10 个宇宙模板。
+- `UniverseSummary`、`UniverseLaws`、`TimelineEvent` 类型。
+- 宇宙指标、结构化法则和 8 至 12 条关键纪元事件生成。
+- 分享码与分享链接复现。
+- 固定 seed 与 50 seed 冒烟测试。
 
 主要规格文档：
 
 - [docs/phase-0.md](docs/phase-0.md)
+- [docs/phase-1.md](docs/phase-1.md)
 - [docs/milestones.md](docs/milestones.md)
 - [docs/repository-readiness.md](docs/repository-readiness.md)
 
 ## 仓库状态
 
 - 当前分支：`master`
-- 当前阶段：阶段 0 已完成，准备进入阶段 1
+- 当前阶段：阶段 1 已实现，准备验收与提交
 - 开源协议：MIT，见 [LICENSE.md](LICENSE.md)
 - 协作规则：见 [CONTRIBUTING.md](CONTRIBUTING.md)
 - 安全报告：见 [SECURITY.md](SECURITY.md)
 
+## 本地运行
+
+```text
+npm install
+npm run dev
+```
+
+常用检查：
+
+```text
+npm test
+npm run build
+```
+
 ## 推荐下一步
 
-1. 创建 Web 应用骨架。
-2. 实现 `rulesetVersion` 与 seed 标准化。
-3. 实现 seed PRNG 与分支随机流。
-4. 实现第一批宇宙模板。
-5. 实现 `UniverseSummary`、`UniverseLaws`、`TimelineEvent`。
-6. 实现宇宙指标与纪元时间线生成。
-7. 搭建第一版网页应用。
+1. 提交并推送阶段 1 产物。
+2. 基于固定 seed 做人工读感验收。
+3. 进入阶段 2：宇宙法则引擎。
 
 ## 一句话
 
