@@ -1,4 +1,5 @@
 import { generateExplanations, generateObservationLog } from "./explain";
+import { generateGalaxies } from "./galaxies";
 import { generateLawInteractions, generateLaws } from "./laws";
 import { generateMetrics } from "./metrics";
 import { generateDescription, generateTagline, generateUniverseName } from "./names";
@@ -20,6 +21,7 @@ export function generateUniverse(input: GenerateUniverseInput): UniverseSummary 
   const description = generateDescription(template, laws, metrics);
   const timeline = generateTimeline(template, laws, metrics, root.fork("timeline"));
   const timelineImpact = summarizeTimelineImpact(timeline, metrics);
+  const galaxies = generateGalaxies({ laws, metrics, timelineImpact }, root.fork("galaxies"));
   const explanations = generateExplanations(template, laws, metrics, timeline);
   const observationLog = generateObservationLog(timeline, metrics, laws);
   const shareCode = createShareCode(seed, template.id);
@@ -44,6 +46,7 @@ export function generateUniverse(input: GenerateUniverseInput): UniverseSummary 
     lawInteractions,
     timeline,
     timelineImpact,
+    galaxies,
     explanations,
     observationLog,
   };

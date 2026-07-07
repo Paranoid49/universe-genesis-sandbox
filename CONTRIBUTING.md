@@ -11,7 +11,7 @@
 - [docs/phase-1.md](docs/phase-1.md)：第一版可复现宇宙卡片的实现规格。
 - [docs/phase-2.md](docs/phase-2.md)：结构化法则、法则关系和指标影响来源。
 - [docs/phase-3.md](docs/phase-3.md)：纪元时间线、事件因果和时间线影响摘要。
-- [docs/phase-4.md](docs/phase-4.md)：星系、恒星、行星与生命样本的开发准备契约。
+- [docs/phase-4.md](docs/phase-4.md)：星系、恒星、行星、生命样本、局部探索路径和阶段 5 前置契约。
 
 如果你的变更会改变产品范围、数据契约、阶段门禁或用户路径，应先更新对应文档，再改代码。
 
@@ -52,7 +52,8 @@ src/sim/templates   宇宙模板与模板短码
 src/sim/laws        结构化宇宙法则生成
 src/sim/metrics     宇宙指标生成
 src/sim/timeline    纪元事件生成
-src/sim/content     法则、时间线和后续阶段的内容素材池
+src/sim/galaxies    星系、恒星系、行星和生物圈样本生成
+src/sim/content     法则、时间线、空间对象和后续阶段的内容素材池
 src/sim/names       名称、摘要和描述生成
 src/sim/share       分享码与链接参数恢复
 src/sim/universe    UniverseSummary 总生成入口
@@ -81,6 +82,7 @@ docs/               阶段规格与项目文档
 - 分享体验应保持轻量：用户可见文案优先简短，完整复现信息由分享码或链接参数承载。
 - 新增内容池优先放入 `src/sim/content/`，核心生成器只保留算法、权重消费和结构组装。
 - 阶段 4 局部对象生成应消费 `UniverseSummary.timelineImpact`，不要从页面文案反推生成倾向。
+- 阶段 5 文明生成应从 `Biosphere.civilizationSeed` 或明确的生命行星来源派生，不要脱离阶段 4 局部对象凭空生成。
 
 ## 测试要求
 

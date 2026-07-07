@@ -1,4 +1,5 @@
 export { generateUniverse } from "./universe";
+export { generateGalaxies } from "./galaxies";
 export { compareUniverseLaws } from "./compare";
 export { decodeShareCode, decodeShareParams } from "./share";
 export { filterTimelineByEra, summarizeTimelineImpact } from "./timeline";
@@ -7,8 +8,14 @@ export { formatSeed, normalizeSeed } from "./random";
 export { RULESET_SHORT_CODE, RULESET_VERSION } from "./types";
 export type {
   Explanation,
+  Biosphere,
+  BiosphereLevel,
+  CivilizationFate,
+  CivilizationSeed,
   EraId,
   GenerateUniverseInput,
+  Galaxy,
+  GalaxyType,
   DomainLawDiff,
   LawComparison,
   LawDomain,
@@ -19,6 +26,11 @@ export type {
   LocalGenerationBiasId,
   MetricId,
   MetricInfluence,
+  Planet,
+  PlanetType,
+  SpeciesType,
+  StarSystem,
+  StarSystemType,
   StructuredLaw,
   TimelineEraProfile,
   TimelineEvent,

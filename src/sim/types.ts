@@ -1,5 +1,5 @@
-export const RULESET_VERSION = "ugs-ruleset@0.3.1";
-export const RULESET_SHORT_CODE = "UGS031";
+export const RULESET_VERSION = "ugs-ruleset@0.4.0";
+export const RULESET_SHORT_CODE = "UGS04";
 
 export type UniverseTemplateId =
   | "hard_science"
@@ -161,6 +161,126 @@ export type TimelineImpactSummary = {
   summary: string;
 };
 
+export type GalaxyType =
+  | "spiral"
+  | "elliptical"
+  | "dwarf"
+  | "irregular"
+  | "nebula_forge"
+  | "arcane_cluster"
+  | "divine_remnant"
+  | "causal_shard";
+
+export type StarSystemType =
+  | "single_star"
+  | "binary_star"
+  | "trinary_star"
+  | "red_dwarf"
+  | "giant_star"
+  | "white_dwarf"
+  | "black_hole_neighbor"
+  | "arcane_star";
+
+export type PlanetType =
+  | "rocky"
+  | "ocean"
+  | "desert"
+  | "ice"
+  | "gas_giant"
+  | "floating"
+  | "dream"
+  | "aether"
+  | "mechanical";
+
+export type BiosphereLevel =
+  | "microbial"
+  | "complex"
+  | "intelligent"
+  | "magical"
+  | "spiritual"
+  | "mechanical";
+
+export type SpeciesType =
+  | "biological"
+  | "magical"
+  | "spiritual"
+  | "mechanical"
+  | "hybrid";
+
+export type CivilizationFate =
+  | "expansion"
+  | "ascension"
+  | "collapse"
+  | "stagnation"
+  | "symbiosis"
+  | "unknown";
+
+export type CivilizationSeed = {
+  originPlanetId: string;
+  speciesType: SpeciesType;
+  technologyLevel: number;
+  magicLevel: number;
+  faithIntensity: number;
+  expansionDrive: number;
+  stability: number;
+  fate: CivilizationFate;
+  sourceEventIds: string[];
+  sourceRuleIds: string[];
+};
+
+export type Biosphere = {
+  level: BiosphereLevel;
+  dominantForm: string;
+  complexity: number;
+  magicAdaptation: number;
+  civilizationChance: number;
+  civilizationSeed?: CivilizationSeed;
+  sourceEventIds: string[];
+  sourceRuleIds: string[];
+};
+
+export type Planet = {
+  id: string;
+  name: string;
+  type: PlanetType;
+  orbitZone: "inner" | "habitable" | "outer";
+  habitability: number;
+  magicSaturation: number;
+  atmosphere: number;
+  water: number;
+  stability: number;
+  biosphere?: Biosphere;
+  sourceEventIds: string[];
+  sourceRuleIds: string[];
+};
+
+export type StarSystem = {
+  id: string;
+  name: string;
+  type: StarSystemType;
+  starClass: string;
+  stability: number;
+  luminosity: number;
+  anomalyLevel: number;
+  planets: Planet[];
+  sourceEventIds: string[];
+  sourceRuleIds: string[];
+};
+
+export type Galaxy = {
+  id: string;
+  name: string;
+  type: GalaxyType;
+  mass: number;
+  metallicity: number;
+  magicFlux: number;
+  divineResidue: number;
+  causalHazard: number;
+  starSystems: StarSystem[];
+  sourceEventIds: string[];
+  sourceRuleIds: string[];
+};
+
 export type TimelineEvent = {
   id: string;
   age: number;
@@ -227,6 +347,7 @@ export type UniverseSummary = {
   lawInteractions: LawInteraction[];
   timeline: TimelineEvent[];
   timelineImpact: TimelineImpactSummary;
+  galaxies: Galaxy[];
   explanations: Explanation[];
   observationLog: ObservationLog;
 };
