@@ -1,6 +1,7 @@
-import { Clipboard, Dices, Link, RefreshCcw, Sparkles } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Clipboard, Dices, Link, RefreshCcw, Scale, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  compareUniverseLaws,
   decodeShareParams,
   formatSeed,
   generateUniverse,
@@ -22,9 +23,16 @@ export function App() {
   const [selectedEventId, setSelectedEventId] = useState<string | undefined>();
   const [copyState, setCopyState] = useState("复制分享");
   const [shareWarnings] = useState<string[]>(initialShare?.warnings ?? []);
+  const [compareDraftSeed, setCompareDraftSeed] = useState("ASH-44DE-0101");
+  const [compareSeed, setCompareSeed] = useState(normalizeSeed("ASH-44DE-0101"));
 
   const universe = useMemo(() => generateUniverse({ seed: activeSeed, templateId }), [activeSeed, templateId]);
   const selectedEvent = universe.timeline.find((event) => event.id === selectedEventId) ?? universe.timeline[0];
+  const comparison = useMemo(() => compareUniverseLaws(activeSeed, compareSeed, templateId), [activeSeed, compareSeed, templateId]);
+  const lawNameById = useMemo(() => {
+    const entries = Object.values(universe.laws).flatMap((domain) => domain.rules.map((rule) => [rule.id, `${rule.name}（${rule.value}）`] as const));
+    return new Map(entries);
+  }, [universe.laws]);
 
   useEffect(() => {
     setSelectedEventId(universe.timeline[0]?.id);
@@ -46,6 +54,10 @@ export function App() {
     await navigator.clipboard.writeText(text);
     setCopyState("已复制");
     window.setTimeout(() => setCopyState("复制分享"), 1200);
+  }
+
+  function compareSeedNow() {
+    setCompareSeed(normalizeSeed(compareDraftSeed));
   }
 
   return (
@@ -135,6 +147,16 @@ export function App() {
                 </div>
                 <b>{metric.label}</b>
                 <p>{metric.explanation}</p>
+                {metric.influences && metric.influences.length > 0 && (
+                  <div className="metric-influences">
+                    {topInfluences(metric.influences).map((influence) => (
+                      <span key={`${key}-${influence.sourceId}`}>
+                        {influence.sourceLabel}
+                        <b>{signed(influence.delta)}</b>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </article>
             ))}
           </div>
@@ -174,9 +196,71 @@ export function App() {
                     <span key={trait}>{trait}</span>
                   ))}
                 </div>
+                <div className="structured-rules">
+                  {law.rules.map((rule) => (
+                    <div className="structured-rule" key={rule.id}>
+                      <div>
+                        <b>{rule.name}</b>
+                        <strong>{rule.value}</strong>
+                      </div>
+                      <span>
+                        {rule.label}｜{polarityName(rule.polarity)}
+                      </span>
+                      <p>{rule.explanation}</p>
+                      <div className="effect-list">
+                        {rule.effectTargets.map((target) => (
+                          <em key={`${rule.id}-${target}`}>{metricName(target)}</em>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
                 <small>{law.cost}</small>
               </article>
             ))}
+          </div>
+          <div className="interaction-list">
+            <h4>法则关系</h4>
+            {universe.lawInteractions.map((interaction) => (
+              <article key={interaction.id}>
+                <div>
+                  <b>{interactionKindName(interaction.kind)}</b>
+                  <strong>{signed(interaction.impact)}</strong>
+                </div>
+                <p>
+                  {lawNameById.get(interaction.sourceLawId)} → {lawNameById.get(interaction.targetLawId)}
+                </p>
+                <small>{interaction.explanation}</small>
+              </article>
+            ))}
+          </div>
+          <div className="comparison-panel" aria-label="seed 法则对比">
+            <SectionHeader icon={<Scale size={18} />} title="Seed 法则对比" text={comparison.summary} />
+            <div className="compare-controls">
+              <label>
+                <span>对比 Seed</span>
+                <input value={compareDraftSeed} onChange={(event) => setCompareDraftSeed(event.target.value)} />
+              </label>
+              <button type="button" onClick={compareSeedNow}>
+                对比
+              </button>
+            </div>
+            <div className="comparison-grid">
+              {comparison.domainDiffs.map((diff) => (
+                <article key={diff.domain}>
+                  <div>
+                    <span>{lawDomainName(diff.domain)}</span>
+                    <strong>{signed(diff.delta)}</strong>
+                  </div>
+                  <p>
+                    {diff.leftValue} → {diff.rightValue}
+                  </p>
+                  <small>
+                    {diff.strongestLeftRule} / {diff.strongestRightRule}
+                  </small>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
       </section>
@@ -190,7 +274,7 @@ export function App() {
   );
 }
 
-function SectionHeader({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
+function SectionHeader({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
   return (
     <header className="section-header">
       <div>{icon}</div>
@@ -248,6 +332,44 @@ function metricName(key: string): string {
     causalityIntegrity: "因果完整",
   };
   return names[key] ?? key;
+}
+
+function lawDomainName(key: string): string {
+  const names: Record<string, string> = {
+    physics: "物理",
+    magic: "魔法",
+    life: "生命",
+    consciousness: "意识",
+    divinity: "神性",
+    causality: "因果",
+  };
+  return names[key] ?? key;
+}
+
+function polarityName(value: string): string {
+  const names: Record<string, string> = {
+    support: "支撑",
+    pressure: "压力",
+    volatile: "波动",
+  };
+  return names[value] ?? value;
+}
+
+function interactionKindName(value: string): string {
+  const names: Record<string, string> = {
+    synergy: "协同",
+    conflict: "冲突",
+    constraint: "约束",
+  };
+  return names[value] ?? value;
+}
+
+function topInfluences(influences: NonNullable<ReturnType<typeof generateUniverse>["metrics"]["age"]["influences"]>) {
+  return [...influences].sort((left, right) => Math.abs(right.delta) - Math.abs(left.delta)).slice(0, 2);
+}
+
+function signed(value: number): string {
+  return value > 0 ? `+${value}` : `${value}`;
 }
 
 function eraName(era: string): string {

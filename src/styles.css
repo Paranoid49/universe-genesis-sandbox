@@ -64,6 +64,9 @@ a {
 .section-header,
 .metric-topline,
 .law-heading,
+.structured-rule > div,
+.interaction-list article > div,
+.comparison-grid article > div,
 .detail-columns {
   display: flex;
   align-items: center;
@@ -105,6 +108,10 @@ h1 {
 .timeline-event em,
 .event-detail span,
 .law-row small,
+.structured-rule span,
+.structured-rule p,
+.interaction-list small,
+.comparison-grid small,
 .metric-tile p,
 .log-band p {
   color: #bfb3a4;
@@ -114,6 +121,7 @@ h1 {
 .share-panel span,
 .timeline-event span,
 .timeline-event em,
+.structured-rule span,
 .law-row small {
   font-size: 0.78rem;
 }
@@ -317,8 +325,30 @@ button:hover,
 .metric-tile p,
 .event-detail p,
 .law-row p,
+.structured-rule p,
+.interaction-list p,
 .log-band p {
   line-height: 1.55;
+}
+
+.metric-influences {
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.metric-influences span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #cdbf9d;
+  font-size: 0.78rem;
+}
+
+.metric-influences b {
+  margin: 0;
+  color: #7fc9af;
 }
 
 .timeline-list {
@@ -427,6 +457,106 @@ button:hover,
   font-size: 0.75rem;
 }
 
+.structured-rules {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.structured-rule {
+  display: grid;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(244, 239, 230, 0.11);
+}
+
+.structured-rule > div {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.structured-rule strong,
+.interaction-list strong,
+.comparison-grid strong {
+  color: #e9c46a;
+}
+
+.effect-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.effect-list em {
+  padding: 4px 6px;
+  border: 1px solid rgba(127, 201, 175, 0.28);
+  border-radius: 6px;
+  color: #7fc9af;
+  font-size: 0.72rem;
+  font-style: normal;
+}
+
+.interaction-list,
+.comparison-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(244, 239, 230, 0.13);
+}
+
+.interaction-list h4 {
+  margin: 0;
+  color: #e9c46a;
+  font-size: 0.98rem;
+}
+
+.interaction-list article,
+.comparison-grid article {
+  display: grid;
+  gap: 6px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(244, 239, 230, 0.09);
+}
+
+.interaction-list article > div,
+.comparison-grid article > div {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.interaction-list p,
+.comparison-grid p {
+  margin: 0;
+  color: #ded1c1;
+}
+
+.compare-controls {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+
+.compare-controls label {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+}
+
+.compare-controls span {
+  color: #cdbf9d;
+  font-size: 0.72rem;
+}
+
+.compare-controls input {
+  width: 100%;
+}
+
+.comparison-grid {
+  display: grid;
+  gap: 2px;
+}
+
 .log-band {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -484,6 +614,7 @@ button:hover,
 
   .tool-strip,
   .share-panel,
+  .compare-controls,
   .detail-columns,
   .log-band {
     display: grid;

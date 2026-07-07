@@ -1,5 +1,5 @@
-export const RULESET_VERSION = "ugs-ruleset@0.1.0";
-export const RULESET_SHORT_CODE = "UGS01";
+export const RULESET_VERSION = "ugs-ruleset@0.2.0";
+export const RULESET_SHORT_CODE = "UGS02";
 
 export type UniverseTemplateId =
   | "hard_science"
@@ -51,6 +51,35 @@ export type LawRating = {
   value: number;
   label: string;
   explanation: string;
+  influences?: MetricInfluence[];
+};
+
+export type StructuredLaw = {
+  id: string;
+  domain: LawDomainId;
+  name: string;
+  value: number;
+  label: string;
+  effectTargets: MetricId[];
+  polarity: "support" | "pressure" | "volatile";
+  explanation: string;
+};
+
+export type LawInteraction = {
+  id: string;
+  sourceLawId: string;
+  targetLawId: string;
+  kind: "synergy" | "conflict" | "constraint";
+  impact: number;
+  explanation: string;
+};
+
+export type MetricInfluence = {
+  sourceId: string;
+  sourceLabel: string;
+  targetMetric: MetricId;
+  delta: number;
+  explanation: string;
 };
 
 export type LawDomain = {
@@ -60,6 +89,7 @@ export type LawDomain = {
   source: string;
   traits: string[];
   cost: string;
+  rules: StructuredLaw[];
 };
 
 export type UniverseLaws = {
@@ -112,6 +142,24 @@ export type ObservationLog = {
   possibleEndings: string[];
 };
 
+export type DomainLawDiff = {
+  domain: LawDomainId;
+  leftValue: number;
+  rightValue: number;
+  delta: number;
+  strongestLeftRule: string;
+  strongestRightRule: string;
+};
+
+export type LawComparison = {
+  leftSeed: string;
+  rightSeed: string;
+  templateId: UniverseTemplateId;
+  domainDiffs: DomainLawDiff[];
+  largestDiffDomain: LawDomainId;
+  summary: string;
+};
+
 export type UniverseSummary = {
   seed: string;
   displaySeed: string;
@@ -128,6 +176,7 @@ export type UniverseSummary = {
   description: string;
   metrics: UniverseMetrics;
   laws: UniverseLaws;
+  lawInteractions: LawInteraction[];
   timeline: TimelineEvent[];
   explanations: Explanation[];
   observationLog: ObservationLog;

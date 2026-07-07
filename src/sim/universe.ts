@@ -1,5 +1,5 @@
 import { generateExplanations, generateObservationLog } from "./explain";
-import { generateLaws } from "./laws";
+import { generateLawInteractions, generateLaws } from "./laws";
 import { generateMetrics } from "./metrics";
 import { generateDescription, generateTagline, generateUniverseName } from "./names";
 import { createRandomStream, formatSeed, normalizeSeed } from "./random";
@@ -13,7 +13,8 @@ export function generateUniverse(input: GenerateUniverseInput): UniverseSummary 
   const template = getTemplate(input.templateId);
   const root = createRandomStream(`${RULESET_VERSION}:${template.id}:${seed}`, "root");
   const laws = generateLaws(template, root);
-  const metrics = generateMetrics(template, laws, root.fork("metrics"));
+  const lawInteractions = generateLawInteractions(laws, root.fork("laws.interactions"));
+  const metrics = generateMetrics(template, laws, lawInteractions, root.fork("metrics"));
   const name = generateUniverseName(template, root.fork("names.universe"));
   const tagline = generateTagline(template, laws, metrics);
   const description = generateDescription(template, laws, metrics);
@@ -39,6 +40,7 @@ export function generateUniverse(input: GenerateUniverseInput): UniverseSummary 
     description,
     metrics,
     laws,
+    lawInteractions,
     timeline,
     explanations,
     observationLog,

@@ -1,5 +1,5 @@
 import { clamp, round, type RandomStream } from "./random";
-import type { LawDomain, LawDomainId, UniverseLaws } from "./types";
+import type { LawDomain, LawDomainId, LawInteraction, MetricId, StructuredLaw, UniverseLaws } from "./types";
 import type { UniverseTemplate } from "./templates";
 
 const domainNames: Record<LawDomainId, string> = {
@@ -38,6 +38,45 @@ const costs: Record<LawDomainId, string[]> = {
   causality: ["稳定因果会限制奇迹", "裂缝越多，复现难度越高", "时间回流会累积未偿还事件"],
 };
 
+const ruleCatalog: Record<LawDomainId, Array<Omit<StructuredLaw, "id" | "domain" | "value" | "label" | "explanation">>> = {
+  physics: [
+    { name: "恒星形成效率", effectTargets: ["stability", "lifePotential"], polarity: "support" },
+    { name: "重元素生成率", effectTargets: ["lifePotential", "civilizationPotential"], polarity: "support" },
+    { name: "真空衰变压力", effectTargets: ["stability", "causalityIntegrity"], polarity: "pressure" },
+    { name: "空间曲率弹性", effectTargets: ["age", "stability", "causalityIntegrity"], polarity: "volatile" },
+  ],
+  magic: [
+    { name: "灵质通量", effectTargets: ["magicIntensity", "lifePotential"], polarity: "support" },
+    { name: "施法代价", effectTargets: ["magicIntensity", "civilizationPotential"], polarity: "pressure" },
+    { name: "魔法污染", effectTargets: ["stability", "causalityIntegrity"], polarity: "pressure" },
+    { name: "命名术效率", effectTargets: ["magicIntensity", "civilizationPotential"], polarity: "volatile" },
+  ],
+  life: [
+    { name: "宜居窗口宽度", effectTargets: ["lifePotential", "civilizationPotential"], polarity: "support" },
+    { name: "复杂生命门槛", effectTargets: ["lifePotential", "civilizationPotential"], polarity: "pressure" },
+    { name: "灭绝恢复力", effectTargets: ["lifePotential", "stability"], polarity: "support" },
+    { name: "非碳基适应性", effectTargets: ["lifePotential", "magicIntensity"], polarity: "volatile" },
+  ],
+  consciousness: [
+    { name: "意识独立性", effectTargets: ["civilizationPotential", "divineActivity"], polarity: "support" },
+    { name: "灵魂可记录性", effectTargets: ["civilizationPotential", "causalityIntegrity"], polarity: "volatile" },
+    { name: "梦境现实渗透", effectTargets: ["magicIntensity", "causalityIntegrity"], polarity: "volatile" },
+    { name: "集体意识凝聚", effectTargets: ["civilizationPotential", "divineActivity"], polarity: "support" },
+  ],
+  divinity: [
+    { name: "信仰反馈强度", effectTargets: ["divineActivity", "civilizationPotential"], polarity: "support" },
+    { name: "奇迹冷却代价", effectTargets: ["divineActivity", "causalityIntegrity"], polarity: "pressure" },
+    { name: "神战风险", effectTargets: ["stability", "divineActivity"], polarity: "pressure" },
+    { name: "神格自洽度", effectTargets: ["divineActivity", "stability"], polarity: "support" },
+  ],
+  causality: [
+    { name: "因果稳定度", effectTargets: ["causalityIntegrity", "stability"], polarity: "support" },
+    { name: "时间线弹性", effectTargets: ["age", "causalityIntegrity", "civilizationPotential"], polarity: "support" },
+    { name: "预言可靠性", effectTargets: ["civilizationPotential", "divineActivity"], polarity: "volatile" },
+    { name: "裂缝扩散率", effectTargets: ["causalityIntegrity", "stability"], polarity: "pressure" },
+  ],
+};
+
 export function generateLaws(template: UniverseTemplate, root: RandomStream): UniverseLaws {
   return {
     physics: generateDomain("physics", template, root.fork("laws.physics")),
@@ -49,10 +88,38 @@ export function generateLaws(template: UniverseTemplate, root: RandomStream): Un
   };
 }
 
+export function generateLawInteractions(laws: UniverseLaws, rng: RandomStream): LawInteraction[] {
+  const allRules = flattenStructuredLaws(laws);
+  const pairs: Array<{ source: StructuredLaw; target: StructuredLaw; kind: LawInteraction["kind"] }> = [
+    { source: strongestRule(laws.physics.rules), target: strongestRule(laws.life.rules), kind: "synergy" },
+    { source: strongestRule(laws.magic.rules), target: strongestRule(laws.causality.rules), kind: "conflict" },
+    { source: strongestRule(laws.consciousness.rules), target: strongestRule(laws.divinity.rules), kind: "synergy" },
+    { source: strongestRule(laws.physics.rules), target: strongestRule(laws.magic.rules), kind: "constraint" },
+  ];
+
+  return pairs.map(({ source, target, kind }, index) => {
+    const impactBase = Math.abs(source.value - target.value) + rng.int(4, 16);
+    const impact = round(clamp(kind === "synergy" ? impactBase : -impactBase, -40, 40));
+    return {
+      id: `interaction-${index + 1}`,
+      sourceLawId: source.id,
+      targetLawId: target.id,
+      kind,
+      impact,
+      explanation: interactionExplanation(source, target, kind, impact),
+    };
+  }).filter((interaction) => allRules.some((rule) => rule.id === interaction.sourceLawId) && allRules.some((rule) => rule.id === interaction.targetLawId));
+}
+
+export function flattenStructuredLaws(laws: UniverseLaws): StructuredLaw[] {
+  return Object.values(laws).flatMap((domain) => domain.rules);
+}
+
 function generateDomain(id: LawDomainId, template: UniverseTemplate, rng: RandomStream): LawDomain {
   const value = round(clamp(template.weights[id] + rng.range(-13, 13)));
   const selectedTraits = uniquePicks(traits[id], rng, 3);
   const title = `${template.name}的${domainNames[id]}`;
+  const rules = generateStructuredRules(id, value, rng);
 
   return {
     id,
@@ -65,7 +132,23 @@ function generateDomain(id: LawDomainId, template: UniverseTemplate, rng: Random
     source: rng.pick(sources[id]),
     traits: selectedTraits,
     cost: rng.pick(costs[id]),
+    rules,
   };
+}
+
+function generateStructuredRules(id: LawDomainId, domainValue: number, rng: RandomStream): StructuredLaw[] {
+  const catalog = uniquePicks(ruleCatalog[id], rng, 2);
+  return catalog.map((rule, index) => {
+    const value = round(clamp(domainValue + rng.range(-18, 18)));
+    return {
+      ...rule,
+      id: `${id}.${stableRuleId(rule.name)}.${index + 1}`,
+      domain: id,
+      value,
+      label: labelFor(value),
+      explanation: structuredRuleExplanation(rule.name, id, value, rule.polarity, rule.effectTargets),
+    };
+  });
 }
 
 function labelFor(value: number): string {
@@ -81,9 +164,51 @@ function explanationFor(id: LawDomainId, value: number, templateName: string): s
   return `${templateName}中，${domainNames[id]}${direction}，数值为 ${value}。`;
 }
 
-function uniquePicks(items: string[], rng: RandomStream, count: number): string[] {
+function structuredRuleExplanation(
+  name: string,
+  domain: LawDomainId,
+  value: number,
+  polarity: StructuredLaw["polarity"],
+  effectTargets: MetricId[],
+): string {
+  const effect = polarity === "support" ? "提供正向支撑" : polarity === "pressure" ? "形成持续压力" : "带来高波动影响";
+  return `${domainNames[domain]}中的“${name}”数值为 ${value}，会对${effectTargets.map(metricName).join("、")}${effect}。`;
+}
+
+function interactionExplanation(source: StructuredLaw, target: StructuredLaw, kind: LawInteraction["kind"], impact: number): string {
+  const kindText = kind === "synergy" ? "协同" : kind === "conflict" ? "冲突" : "约束";
+  return `“${source.name}”与“${target.name}”形成${kindText}关系，综合影响值为 ${impact}。`;
+}
+
+function strongestRule(rules: StructuredLaw[]): StructuredLaw {
+  return [...rules].sort((left, right) => right.value - left.value)[0];
+}
+
+function stableRuleId(value: string): string {
+  return value
+    .replace(/[^\u4e00-\u9fa5A-Za-z0-9]/g, "")
+    .split("")
+    .map((char) => char.charCodeAt(0).toString(36))
+    .join("")
+    .slice(0, 16);
+}
+
+function metricName(metric: MetricId): string {
+  const names: Record<MetricId, string> = {
+    age: "宇宙年龄",
+    stability: "稳定度",
+    lifePotential: "生命潜力",
+    civilizationPotential: "文明潜力",
+    magicIntensity: "魔法强度",
+    divineActivity: "神性活跃度",
+    causalityIntegrity: "因果完整度",
+  };
+  return names[metric];
+}
+
+function uniquePicks<T>(items: readonly T[], rng: RandomStream, count: number): T[] {
   const pool = [...items];
-  const result: string[] = [];
+  const result: T[] = [];
   while (pool.length > 0 && result.length < count) {
     const index = rng.int(0, pool.length - 1);
     result.push(pool.splice(index, 1)[0]);
