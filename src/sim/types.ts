@@ -1,5 +1,5 @@
-export const RULESET_VERSION = "ugs-ruleset@0.2.0";
-export const RULESET_SHORT_CODE = "UGS02";
+export const RULESET_VERSION = "ugs-ruleset@0.3.1";
+export const RULESET_SHORT_CODE = "UGS031";
 
 export type UniverseTemplateId =
   | "hard_science"
@@ -33,17 +33,21 @@ export type MetricId =
 export type EraId =
   | "creation"
   | "stars"
+  | "elements"
   | "life"
   | "civilization"
   | "myth"
+  | "ascension"
   | "ending";
 
 export type EventType =
   | "creation"
   | "stars"
+  | "elements"
   | "life"
   | "civilization"
   | "myth"
+  | "ascension"
   | "ending"
   | "anomaly";
 
@@ -115,6 +119,46 @@ export type EventEffect = {
   metric: MetricId | "timeline" | "laws";
   delta: number;
   description: string;
+  influence: "metric" | "probability" | "law-pressure";
+  affectsFuture: boolean;
+};
+
+export type LocalGenerationBiasId =
+  | "galaxyDensity"
+  | "stellarStability"
+  | "planetHabitability"
+  | "biosphereChance"
+  | "civilizationSeedChance"
+  | "magicAnomalyDensity"
+  | "divineRelicDensity"
+  | "causalHazardLevel";
+
+export type LocalGenerationBias = {
+  id: LocalGenerationBiasId;
+  label: string;
+  value: number;
+  sourceEventIds: string[];
+  explanation: string;
+};
+
+export type TimelineEraProfile = {
+  era: EraId;
+  eventCount: number;
+  futureAffectingEventCount: number;
+  influenceScore: number;
+  dominantType: EventType;
+  keyEventIds: string[];
+};
+
+export type TimelineImpactSummary = {
+  eventCount: number;
+  futureAffectingEventCount: number;
+  metricDeltas: Record<MetricId, number>;
+  pressureDeltas: Record<"timeline" | "laws", number>;
+  localBiases: LocalGenerationBias[];
+  eraProfiles: TimelineEraProfile[];
+  keySourceEventIds: string[];
+  summary: string;
 };
 
 export type TimelineEvent = {
@@ -128,6 +172,10 @@ export type TimelineEvent = {
   causes: string[];
   effects: EventEffect[];
   importance: number;
+  location: string;
+  sourceIds: string[];
+  triggeredByEventIds: string[];
+  causalNotes: string[];
 };
 
 export type Explanation = {
@@ -178,6 +226,7 @@ export type UniverseSummary = {
   laws: UniverseLaws;
   lawInteractions: LawInteraction[];
   timeline: TimelineEvent[];
+  timelineImpact: TimelineImpactSummary;
   explanations: Explanation[];
   observationLog: ObservationLog;
 };

@@ -9,6 +9,9 @@
 - [docs/milestones.md](docs/milestones.md)：长期路线图与阶段边界。
 - [docs/phase-0.md](docs/phase-0.md)：产品边界、非目标、确定性原则。
 - [docs/phase-1.md](docs/phase-1.md)：第一版可复现宇宙卡片的实现规格。
+- [docs/phase-2.md](docs/phase-2.md)：结构化法则、法则关系和指标影响来源。
+- [docs/phase-3.md](docs/phase-3.md)：纪元时间线、事件因果和时间线影响摘要。
+- [docs/phase-4.md](docs/phase-4.md)：星系、恒星、行星与生命样本的开发准备契约。
 
 如果你的变更会改变产品范围、数据契约、阶段门禁或用户路径，应先更新对应文档，再改代码。
 
@@ -49,6 +52,7 @@ src/sim/templates   宇宙模板与模板短码
 src/sim/laws        结构化宇宙法则生成
 src/sim/metrics     宇宙指标生成
 src/sim/timeline    纪元事件生成
+src/sim/content     法则、时间线和后续阶段的内容素材池
 src/sim/names       名称、摘要和描述生成
 src/sim/share       分享码与链接参数恢复
 src/sim/universe    UniverseSummary 总生成入口
@@ -65,8 +69,9 @@ docs/               阶段规格与项目文档
 - 模拟核心不得直接使用 `Math.random()`。
 - 所有模拟随机值必须来自确定性 PRNG。
 - 新模块应使用稳定的命名随机流。
-- 会影响生成结果的规则、权重、名称池、事件池或解释池变更，必须更新 `rulesetVersion` 或说明兼容策略。
-- 分享码或分享链接必须能恢复 `seed`、`templateId` 和 `rulesetVersion`。
+- 会影响生成结果的规则、权重、名称池、事件池或解释池变更，必须更新 `rulesetVersion`。
+- 分享码或分享链接必须能恢复 `seed`、`templateId` 和当前 `rulesetVersion`。
+- 当前应用只保证同一当前规则版本内复现，非当前规则短码只提示不受支持，不提供旧规则运行时兼容。
 
 ## 数据与内容规则
 
@@ -74,6 +79,8 @@ docs/               阶段规格与项目文档
 - 新增字段应有清晰名称、含义和使用位置。
 - 生成内容不能只是随机拼词，重要结果应能解释来源。
 - 分享体验应保持轻量：用户可见文案优先简短，完整复现信息由分享码或链接参数承载。
+- 新增内容池优先放入 `src/sim/content/`，核心生成器只保留算法、权重消费和结构组装。
+- 阶段 4 局部对象生成应消费 `UniverseSummary.timelineImpact`，不要从页面文案反推生成倾向。
 
 ## 测试要求
 

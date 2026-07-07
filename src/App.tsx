@@ -1,13 +1,16 @@
-import { Clipboard, Dices, Link, RefreshCcw, Scale, Sparkles } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Clipboard, Dices, Link, ListFilter, RefreshCcw, Scale, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   compareUniverseLaws,
   decodeShareParams,
+  filterTimelineByEra,
   formatSeed,
   generateUniverse,
   normalizeSeed,
   RULESET_VERSION,
   UNIVERSE_TEMPLATES,
+  type EraId,
+  type TimelineImpactSummary,
   type TimelineEvent,
   type UniverseTemplateId,
 } from "./sim";
@@ -15,6 +18,17 @@ import {
 const initialShare = typeof window !== "undefined" ? decodeShareParams(window.location.search) : undefined;
 const initialSeed = initialShare?.seed ?? "LUX-7F3A-91C2";
 const initialTemplate = initialShare?.templateId ?? "high_magic";
+const eraFilterOptions: Array<{ id: EraId | "all"; label: string }> = [
+  { id: "all", label: "全部" },
+  { id: "creation", label: "创世" },
+  { id: "stars", label: "星辰" },
+  { id: "elements", label: "元素" },
+  { id: "life", label: "生命" },
+  { id: "civilization", label: "文明" },
+  { id: "myth", label: "神话" },
+  { id: "ascension", label: "飞升" },
+  { id: "ending", label: "终局" },
+];
 
 export function App() {
   const [draftSeed, setDraftSeed] = useState(formatSeed(initialSeed));
@@ -25,18 +39,42 @@ export function App() {
   const [shareWarnings] = useState<string[]>(initialShare?.warnings ?? []);
   const [compareDraftSeed, setCompareDraftSeed] = useState("ASH-44DE-0101");
   const [compareSeed, setCompareSeed] = useState(normalizeSeed("ASH-44DE-0101"));
+  const [eraFilter, setEraFilter] = useState<EraId | "all">("all");
+  const copyResetTimerRef = useRef<number | undefined>(undefined);
 
   const universe = useMemo(() => generateUniverse({ seed: activeSeed, templateId }), [activeSeed, templateId]);
-  const selectedEvent = universe.timeline.find((event) => event.id === selectedEventId) ?? universe.timeline[0];
+  const filteredTimeline = useMemo(() => filterTimelineByEra(universe.timeline, eraFilter), [universe.timeline, eraFilter]);
+  const selectedEvent = filteredTimeline.find((event) => event.id === selectedEventId) ?? filteredTimeline[0] ?? universe.timeline[0];
   const comparison = useMemo(() => compareUniverseLaws(activeSeed, compareSeed, templateId), [activeSeed, compareSeed, templateId]);
-  const lawNameById = useMemo(() => {
-    const entries = Object.values(universe.laws).flatMap((domain) => domain.rules.map((rule) => [rule.id, `${rule.name}（${rule.value}）`] as const));
+  const sourceLabelById = useMemo(() => {
+    const lawEntries = Object.values(universe.laws).flatMap((domain) => domain.rules.map((rule) => [rule.id, `${rule.name}（${rule.value}）`] as const));
+    const interactionEntries = universe.lawInteractions.map((interaction) => [interaction.id, interactionKindName(interaction.kind)] as const);
+    const metricEntries = Object.keys(universe.metrics).map((metricId) => [`metric.${metricId}`, metricName(metricId)] as const);
+    const eventEntries = universe.timeline.map((event) => [event.id, event.title] as const);
+    const entries = [...lawEntries, ...interactionEntries, ...metricEntries, ...eventEntries];
     return new Map(entries);
-  }, [universe.laws]);
+  }, [universe.laws, universe.lawInteractions, universe.metrics, universe.timeline]);
 
   useEffect(() => {
     setSelectedEventId(universe.timeline[0]?.id);
   }, [universe.shareCode]);
+
+  useEffect(() => {
+    setSelectedEventId((current) => {
+      if (current && filteredTimeline.some((event) => event.id === current)) {
+        return current;
+      }
+      return filteredTimeline[0]?.id ?? universe.timeline[0]?.id;
+    });
+  }, [filteredTimeline, universe.timeline]);
+
+  useEffect(() => {
+    return () => {
+      if (copyResetTimerRef.current !== undefined) {
+        window.clearTimeout(copyResetTimerRef.current);
+      }
+    };
+  }, []);
 
   function createUniverse() {
     setActiveSeed(normalizeSeed(draftSeed));
@@ -51,13 +89,35 @@ export function App() {
   async function copyShare() {
     const shareLink = `${window.location.origin}${window.location.pathname}${universe.shareUrl}`;
     const text = `${universe.shareText}\n${shareLink}`;
-    await navigator.clipboard.writeText(text);
-    setCopyState("已复制");
-    window.setTimeout(() => setCopyState("复制分享"), 1200);
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("剪贴板接口不可用。");
+      }
+      await navigator.clipboard.writeText(text);
+      setCopyState("已复制");
+    } catch {
+      if (typeof window.prompt === "function") {
+        window.prompt("复制分享内容", text);
+        setCopyState("已打开复制框");
+      } else {
+        setCopyState("复制失败");
+      }
+    }
+    scheduleCopyStateReset();
   }
 
   function compareSeedNow() {
     setCompareSeed(normalizeSeed(compareDraftSeed));
+  }
+
+  function scheduleCopyStateReset() {
+    if (copyResetTimerRef.current !== undefined) {
+      window.clearTimeout(copyResetTimerRef.current);
+    }
+    copyResetTimerRef.current = window.setTimeout(() => {
+      setCopyState("复制分享");
+      copyResetTimerRef.current = undefined;
+    }, 1400);
   }
 
   return (
@@ -163,9 +223,23 @@ export function App() {
         </section>
 
         <section className="timeline-panel" aria-label="纪元时间线">
-          <SectionHeader icon={<Sparkles size={18} />} title="纪元时间线" text={`${universe.timeline.length} 条关键事件`} />
+          <SectionHeader icon={<Sparkles size={18} />} title="纪元时间线" text={`${universe.timeline.length} 条关键事件，当前显示 ${filteredTimeline.length} 条`} />
+          <div className="era-filter" aria-label="纪元筛选">
+            {eraFilterOptions.map((option) => (
+              <button
+                className={eraFilter === option.id ? "active" : ""}
+                key={option.id}
+                type="button"
+                onClick={() => setEraFilter(option.id)}
+                title={`筛选${option.label}事件`}
+              >
+                <ListFilter size={14} />
+                {option.label}
+              </button>
+            ))}
+          </div>
           <div className="timeline-list">
-            {universe.timeline.map((event) => (
+            {filteredTimeline.map((event) => (
               <button
                 className={event.id === selectedEvent.id ? "timeline-event active" : "timeline-event"}
                 key={event.id}
@@ -174,11 +248,12 @@ export function App() {
               >
                 <span>{event.ageLabel}</span>
                 <strong>{event.title}</strong>
-                <em>{eraName(event.era)}</em>
+                <em>{eraName(event.era)}｜{event.effects.some((effect) => effect.affectsFuture) ? "影响后续" : eventTypeName(event.type)}</em>
               </button>
             ))}
           </div>
-          <EventDetail event={selectedEvent} />
+          <EventDetail event={selectedEvent} sourceLabelById={sourceLabelById} />
+          <TimelineImpactPanel impact={universe.timelineImpact} sourceLabelById={sourceLabelById} />
         </section>
 
         <section className="laws-panel" aria-label="宇宙法则">
@@ -228,7 +303,7 @@ export function App() {
                   <strong>{signed(interaction.impact)}</strong>
                 </div>
                 <p>
-                  {lawNameById.get(interaction.sourceLawId)} → {lawNameById.get(interaction.targetLawId)}
+                  {sourceLabelById.get(interaction.sourceLawId)} → {sourceLabelById.get(interaction.targetLawId)}
                 </p>
                 <small>{interaction.explanation}</small>
               </article>
@@ -286,10 +361,12 @@ function SectionHeader({ icon, title, text }: { icon: ReactNode; title: string; 
   );
 }
 
-function EventDetail({ event }: { event: TimelineEvent }) {
+function EventDetail({ event, sourceLabelById }: { event: TimelineEvent; sourceLabelById: Map<string, string> }) {
   return (
     <article className="event-detail">
-      <span>{eraName(event.era)}｜重要度 {event.importance}</span>
+      <span>
+        {eraName(event.era)}｜{eventTypeName(event.type)}｜{event.location}｜重要度 {event.importance}
+      </span>
       <h3>{event.title}</h3>
       <p>{event.description}</p>
       <div className="detail-columns">
@@ -302,9 +379,59 @@ function EventDetail({ event }: { event: TimelineEvent }) {
         <div>
           <b>后果</b>
           {event.effects.map((effect) => (
-            <small key={`${effect.metric}-${effect.description}`}>{effect.description}</small>
+            <small key={`${effect.metric}-${effect.description}`}>
+              {effect.description}
+              {effect.affectsFuture ? "（影响后续）" : ""}
+            </small>
           ))}
         </div>
+      </div>
+      <div className="event-causality">
+        <div>
+          <b>影响来源</b>
+          {[...new Set(event.sourceIds)].map((sourceId) => (
+            <small key={sourceId}>{sourceLabelById.get(sourceId) ?? sourceId}</small>
+          ))}
+        </div>
+        <div>
+          <b>前序事件</b>
+          {event.triggeredByEventIds.length > 0 ? (
+            event.triggeredByEventIds.map((sourceId) => <small key={sourceId}>{sourceLabelById.get(sourceId) ?? sourceId}</small>)
+          ) : (
+            <small>纪元锚点事件</small>
+          )}
+        </div>
+        <div>
+          <b>因果解释</b>
+          {event.causalNotes.map((note) => (
+            <small key={note}>{note}</small>
+          ))}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function TimelineImpactPanel({ impact, sourceLabelById }: { impact: TimelineImpactSummary; sourceLabelById: Map<string, string> }) {
+  const topBiases = [...impact.localBiases].sort((left, right) => right.value - left.value).slice(0, 4);
+
+  return (
+    <article className="phase4-panel">
+      <div>
+        <h4>局部对象线索</h4>
+        <span>{impact.summary}</span>
+      </div>
+      <div className="phase4-bias-grid">
+        {topBiases.map((bias) => (
+          <section key={bias.id}>
+            <div>
+              <b>{bias.label}</b>
+              <strong>{bias.value}</strong>
+            </div>
+            <p>{bias.explanation}</p>
+            <small>{bias.sourceEventIds.map((eventId) => sourceLabelById.get(eventId) ?? eventId).join(" / ")}</small>
+          </section>
+        ))}
       </div>
     </article>
   );
@@ -330,6 +457,8 @@ function metricName(key: string): string {
     magicIntensity: "魔法强度",
     divineActivity: "神性活跃",
     causalityIntegrity: "因果完整",
+    timeline: "时间线",
+    laws: "法则压力",
   };
   return names[key] ?? key;
 }
@@ -364,6 +493,21 @@ function interactionKindName(value: string): string {
   return names[value] ?? value;
 }
 
+function eventTypeName(value: string): string {
+  const names: Record<string, string> = {
+    creation: "创世事件",
+    stars: "星辰事件",
+    elements: "元素事件",
+    life: "生命事件",
+    civilization: "文明事件",
+    myth: "神话事件",
+    ascension: "飞升事件",
+    ending: "终局事件",
+    anomaly: "异常事件",
+  };
+  return names[value] ?? value;
+}
+
 function topInfluences(influences: NonNullable<ReturnType<typeof generateUniverse>["metrics"]["age"]["influences"]>) {
   return [...influences].sort((left, right) => Math.abs(right.delta) - Math.abs(left.delta)).slice(0, 2);
 }
@@ -376,9 +520,11 @@ function eraName(era: string): string {
   const names: Record<string, string> = {
     creation: "创世",
     stars: "星辰",
+    elements: "元素",
     life: "生命",
     civilization: "文明",
     myth: "神话",
+    ascension: "飞升",
     ending: "终局",
   };
   return names[era] ?? era;

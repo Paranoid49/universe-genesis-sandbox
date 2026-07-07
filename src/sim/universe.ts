@@ -5,7 +5,7 @@ import { generateDescription, generateTagline, generateUniverseName } from "./na
 import { createRandomStream, formatSeed, normalizeSeed } from "./random";
 import { createShareCode, createShareText, createShareUrl } from "./share";
 import { getTemplate } from "./templates";
-import { generateTimeline } from "./timeline";
+import { generateTimeline, summarizeTimelineImpact } from "./timeline";
 import { RULESET_SHORT_CODE, RULESET_VERSION, type GenerateUniverseInput, type UniverseSummary } from "./types";
 
 export function generateUniverse(input: GenerateUniverseInput): UniverseSummary {
@@ -19,10 +19,11 @@ export function generateUniverse(input: GenerateUniverseInput): UniverseSummary 
   const tagline = generateTagline(template, laws, metrics);
   const description = generateDescription(template, laws, metrics);
   const timeline = generateTimeline(template, laws, metrics, root.fork("timeline"));
+  const timelineImpact = summarizeTimelineImpact(timeline, metrics);
   const explanations = generateExplanations(template, laws, metrics, timeline);
   const observationLog = generateObservationLog(timeline, metrics, laws);
-  const shareCode = createShareCode(seed, template.id, RULESET_VERSION);
-  const shareUrl = createShareUrl(seed, template.id, RULESET_VERSION);
+  const shareCode = createShareCode(seed, template.id);
+  const shareUrl = createShareUrl(seed, template.id);
 
   const summary: UniverseSummary = {
     seed,
@@ -42,6 +43,7 @@ export function generateUniverse(input: GenerateUniverseInput): UniverseSummary 
     laws,
     lawInteractions,
     timeline,
+    timelineImpact,
     explanations,
     observationLog,
   };

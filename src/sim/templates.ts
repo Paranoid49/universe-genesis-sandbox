@@ -8,7 +8,7 @@ export type UniverseTemplate = {
   description: string;
   weights: Record<LawDomainId, number>;
   stabilityBias: number;
-  timelineBias: Partial<Record<"creation" | "stars" | "life" | "civilization" | "myth" | "ending" | "anomaly", number>>;
+  timelineBias: Partial<Record<"creation" | "stars" | "elements" | "life" | "civilization" | "myth" | "ascension" | "ending" | "anomaly", number>>;
 };
 
 export const UNIVERSE_TEMPLATES: UniverseTemplate[] = [
