@@ -13,6 +13,7 @@
 - [docs/phase-3.md](docs/phase-3.md)：纪元时间线、事件因果和时间线影响摘要。
 - [docs/phase-4.md](docs/phase-4.md)：星系、恒星、行星、生命样本、局部探索路径和阶段 5 前置契约。
 - [docs/phase-5.md](docs/phase-5.md)：文明实体、文明路径、神话系统、文明历史和阶段 6 禁区。
+- [docs/architecture.md](docs/architecture.md)：模块边界、依赖方向、生成数据流和测试组织。
 
 如果你的变更会改变产品范围、数据契约、阶段门禁或用户路径，应先更新对应文档，再改代码。
 

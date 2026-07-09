@@ -1,43 +1,12 @@
 import { BarChart3, BookOpen, Clipboard, Dices, History, Link, ListFilter, RefreshCcw, Scale, ScrollText, Sparkles, Telescope, UsersRound } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  compareUniverseLaws,
-  decodeShareParams,
-  filterTimelineByEra,
-  formatSeed,
-  generateUniverse,
-  normalizeSeed,
-  RULESET_VERSION,
-  UNIVERSE_TEMPLATES,
-  type EraId,
-  type Galaxy,
-  type Planet,
-  type StarSystem,
-  type UniverseTemplateId,
-} from "./sim";
+import { RULESET_VERSION, UNIVERSE_TEMPLATES, type UniverseTemplateId } from "./sim";
 import { LogColumn, SectionHeader } from "./components/common";
 import { CivilizationPanel } from "./components/CivilizationPanel";
 import { SpaceExplorer } from "./components/SpaceExplorer";
 import { EventDetail, TimelineImpactPanel } from "./components/TimelinePanels";
 import { eraName, eventTypeName, interactionKindName, lawDomainName, metricName, polarityName, signed } from "./ui/labels";
-import { buildSourceLabelMap, summarizeCivilizations, summarizeSpace, topInfluences } from "./ui/selectors";
-
-const initialShare = typeof window !== "undefined" ? decodeShareParams(window.location.search) : undefined;
-const initialSeed = initialShare?.seed ?? "LUX-7F3A-91C2";
-const initialTemplate = initialShare?.templateId ?? "high_magic";
-const eraFilterOptions: Array<{ id: EraId | "all"; label: string }> = [
-  { id: "all", label: "全部" },
-  { id: "creation", label: "创世" },
-  { id: "stars", label: "星辰" },
-  { id: "elements", label: "元素" },
-  { id: "life", label: "生命" },
-  { id: "civilization", label: "文明" },
-  { id: "myth", label: "神话" },
-  { id: "ascension", label: "飞升" },
-  { id: "ending", label: "终局" },
-];
-
-export type AppPageId = "overview" | "space" | "civilizations" | "timeline" | "laws" | "logs";
+import { topInfluences } from "./ui/selectors";
+import { eraFilterOptions, useUniverseAppModel, type AppPageId } from "./ui/useUniverseAppModel";
 
 const appPageOptions: Array<{ id: AppPageId; label: string; description: string; icon: typeof BarChart3 }> = [
   { id: "overview", label: "概览", description: "宇宙摘要与指标", icon: BarChart3 },
@@ -53,126 +22,40 @@ type AppProps = {
 };
 
 export function App({ initialPage = "overview" }: AppProps = {}) {
-  const [draftSeed, setDraftSeed] = useState(formatSeed(initialSeed));
-  const [activeSeed, setActiveSeed] = useState(normalizeSeed(initialSeed));
-  const [templateId, setTemplateId] = useState<UniverseTemplateId>(initialTemplate);
-  const [activePage, setActivePage] = useState<AppPageId>(initialPage);
-  const [selectedEventId, setSelectedEventId] = useState<string | undefined>();
-  const [copyState, setCopyState] = useState("复制分享");
-  const [shareWarnings] = useState<string[]>(initialShare?.warnings ?? []);
-  const [compareDraftSeed, setCompareDraftSeed] = useState("ASH-44DE-0101");
-  const [compareSeed, setCompareSeed] = useState(normalizeSeed("ASH-44DE-0101"));
-  const [eraFilter, setEraFilter] = useState<EraId | "all">("all");
-  const [selectedGalaxyId, setSelectedGalaxyId] = useState<string | undefined>();
-  const [selectedSystemId, setSelectedSystemId] = useState<string | undefined>();
-  const [selectedPlanetId, setSelectedPlanetId] = useState<string | undefined>();
-  const [selectedCivilizationId, setSelectedCivilizationId] = useState<string | undefined>();
-  const copyResetTimerRef = useRef<number | undefined>(undefined);
-
-  const universe = useMemo(() => generateUniverse({ seed: activeSeed, templateId }), [activeSeed, templateId]);
-  const filteredTimeline = useMemo(() => filterTimelineByEra(universe.timeline, eraFilter), [universe.timeline, eraFilter]);
-  const selectedEvent = filteredTimeline.find((event) => event.id === selectedEventId) ?? filteredTimeline[0] ?? universe.timeline[0];
-  const comparison = useMemo(() => compareUniverseLaws(activeSeed, compareSeed, templateId), [activeSeed, compareSeed, templateId]);
-  const selectedGalaxy = universe.galaxies.find((galaxy) => galaxy.id === selectedGalaxyId) ?? universe.galaxies[0];
-  const selectedSystem = selectedGalaxy?.starSystems.find((system) => system.id === selectedSystemId) ?? selectedGalaxy?.starSystems[0];
-  const selectedPlanet = selectedSystem?.planets.find((planet) => planet.id === selectedPlanetId) ?? selectedSystem?.planets[0];
-  const selectedCivilization = universe.civilizations.find((civilization) => civilization.id === selectedCivilizationId) ?? universe.civilizations[0];
-  const spaceStats = useMemo(() => summarizeSpace(universe), [universe]);
-  const civilizationStats = useMemo(() => summarizeCivilizations(universe), [universe]);
-  const sourceLabelById = useMemo(() => buildSourceLabelMap(universe), [universe]);
-
-  useEffect(() => {
-    setSelectedEventId(universe.timeline[0]?.id);
-    const firstGalaxy = universe.galaxies[0];
-    const firstSystem = firstGalaxy?.starSystems[0];
-    const firstPlanet = firstSystem?.planets[0];
-    setSelectedGalaxyId(firstGalaxy?.id);
-    setSelectedSystemId(firstSystem?.id);
-    setSelectedPlanetId(firstPlanet?.id);
-    setSelectedCivilizationId(universe.civilizations[0]?.id);
-  }, [universe.shareCode]);
-
-  useEffect(() => {
-    setSelectedEventId((current) => {
-      if (current && filteredTimeline.some((event) => event.id === current)) {
-        return current;
-      }
-      return filteredTimeline[0]?.id ?? universe.timeline[0]?.id;
-    });
-  }, [filteredTimeline, universe.timeline]);
-
-  useEffect(() => {
-    return () => {
-      if (copyResetTimerRef.current !== undefined) {
-        window.clearTimeout(copyResetTimerRef.current);
-      }
-    };
-  }, []);
-
-  function createUniverse() {
-    setActiveSeed(normalizeSeed(draftSeed));
-  }
-
-  function randomizeSeed() {
-    const nextSeed = createClientSeed();
-    setDraftSeed(formatSeed(nextSeed));
-    setActiveSeed(nextSeed);
-  }
-
-  async function copyShare() {
-    const shareLink = `${window.location.origin}${window.location.pathname}${universe.shareUrl}`;
-    const text = `${universe.shareText}\n${shareLink}`;
-    try {
-      if (!navigator.clipboard?.writeText) {
-        throw new Error("剪贴板接口不可用。");
-      }
-      await navigator.clipboard.writeText(text);
-      setCopyState("已复制");
-    } catch {
-      if (typeof window.prompt === "function") {
-        window.prompt("复制分享内容", text);
-        setCopyState("已打开复制框");
-      } else {
-        setCopyState("复制失败");
-      }
-    }
-    scheduleCopyStateReset();
-  }
-
-  function compareSeedNow() {
-    setCompareSeed(normalizeSeed(compareDraftSeed));
-  }
-
-  function selectGalaxy(galaxy: Galaxy) {
-    const firstSystem = galaxy.starSystems[0];
-    const firstPlanet = firstSystem?.planets[0];
-    setSelectedGalaxyId(galaxy.id);
-    setSelectedSystemId(firstSystem?.id);
-    setSelectedPlanetId(firstPlanet?.id);
-  }
-
-  function selectSystem(system: StarSystem) {
-    setSelectedSystemId(system.id);
-    setSelectedPlanetId(system.planets[0]?.id);
-  }
-
-  function selectPlanet(planet: Planet) {
-    setSelectedPlanetId(planet.id);
-  }
-
-  function selectCivilization(civilization: NonNullable<typeof selectedCivilization>) {
-    setSelectedCivilizationId(civilization.id);
-  }
-
-  function scheduleCopyStateReset() {
-    if (copyResetTimerRef.current !== undefined) {
-      window.clearTimeout(copyResetTimerRef.current);
-    }
-    copyResetTimerRef.current = window.setTimeout(() => {
-      setCopyState("复制分享");
-      copyResetTimerRef.current = undefined;
-    }, 1400);
-  }
+  const {
+    activePage,
+    civilizationStats,
+    compareDraftSeed,
+    comparison,
+    copyShare,
+    copyState,
+    createUniverse,
+    draftSeed,
+    eraFilter,
+    filteredTimeline,
+    randomizeSeed,
+    selectedCivilization,
+    selectedEvent,
+    selectedGalaxy,
+    selectedPlanet,
+    selectedSystem,
+    setActivePage,
+    setCompareDraftSeed,
+    setDraftSeed,
+    setEraFilter,
+    setSelectedEventId,
+    setTemplateId,
+    shareWarnings,
+    sourceLabelById,
+    spaceStats,
+    templateId,
+    universe,
+    compareSeedNow,
+    selectCivilization,
+    selectGalaxy,
+    selectPlanet,
+    selectSystem,
+  } = useUniverseAppModel({ initialPage });
 
   return (
     <main className="app-shell">
@@ -483,14 +366,4 @@ export function App({ initialPage = "overview" }: AppProps = {}) {
       )}
     </main>
   );
-}
-
-function createClientSeed(): string {
-  const bytes = new Uint8Array(8);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes)
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("")
-    .slice(0, 12)
-    .toUpperCase();
 }

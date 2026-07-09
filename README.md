@@ -67,6 +67,7 @@ npm run check
 - [阶段 3：宇宙时间线与纪元系统](docs/phase-3.md)
 - [阶段 4：星系、恒星、行星与生命样本](docs/phase-4.md)
 - [阶段 5：文明演化与神话生成](docs/phase-5.md)
+- [架构说明](docs/architecture.md)
 - [项目演进里程碑](docs/milestones.md)
 - [仓库就绪检查](docs/repository-readiness.md)
 - [贡献指南](CONTRIBUTING.md)
