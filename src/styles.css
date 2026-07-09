@@ -39,7 +39,9 @@ a {
 }
 
 .topbar,
+.page-navigation,
 .overview-band,
+.overview-snapshot,
 .space-panel,
 .civilization-panel,
 .metrics-panel,
@@ -167,7 +169,8 @@ select {
 }
 
 button,
-.share-panel a {
+.share-panel a,
+.share-panel button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -189,8 +192,61 @@ button,
 }
 
 button:hover,
-.share-panel a:hover {
+.share-panel a:hover,
+.share-panel button:hover {
   border-color: rgba(127, 201, 175, 0.65);
+}
+
+.page-navigation {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.page-navigation button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "icon label"
+    "icon desc";
+  justify-content: start;
+  min-height: 58px;
+  height: auto;
+  padding: 10px;
+  text-align: left;
+}
+
+.page-navigation svg {
+  grid-area: icon;
+  align-self: center;
+  color: #7fc9af;
+}
+
+.page-navigation span {
+  grid-area: label;
+  color: #f7f0e4;
+  font-weight: 700;
+}
+
+.page-navigation small {
+  grid-area: desc;
+  color: #bfb3a4;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.page-navigation button.active {
+  border-color: rgba(233, 196, 106, 0.72);
+  background: #3a3026;
+}
+
+.page-stack {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
 }
 
 .overview-band {
@@ -200,6 +256,42 @@ button:hover,
   margin-top: 14px;
   padding: 22px;
   border-radius: 8px;
+}
+
+.page-stack .overview-band {
+  margin-top: 0;
+}
+
+.overview-snapshot {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.overview-snapshot article {
+  display: grid;
+  gap: 5px;
+  min-height: 92px;
+  padding: 14px;
+  border-radius: 8px;
+  background: #26211d;
+}
+
+.overview-snapshot span,
+.overview-snapshot small {
+  color: #bfb3a4;
+  line-height: 1.4;
+}
+
+.overview-snapshot span {
+  font-size: 0.78rem;
+}
+
+.overview-snapshot strong {
+  color: #7fc9af;
+  font-size: 1.75rem;
 }
 
 .eyebrow {
@@ -538,6 +630,19 @@ button:hover,
   min-height: 680px;
   padding: 16px;
   border-radius: 8px;
+}
+
+.page-stack .metrics-panel {
+  min-height: unset;
+}
+
+.page-stack .metrics-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.timeline-panel,
+.laws-panel {
+  margin-top: 14px;
 }
 
 .section-header {
@@ -965,6 +1070,11 @@ button:hover,
     grid-template-columns: 1fr;
   }
 
+  .page-navigation,
+  .overview-snapshot {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .space-grid,
   .space-stats,
   .civilization-grid,
@@ -1014,6 +1124,15 @@ button:hover,
   .log-band {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .page-navigation,
+  .overview-snapshot {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .page-navigation small {
+    display: none;
   }
 
   input,

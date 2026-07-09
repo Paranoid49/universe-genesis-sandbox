@@ -377,14 +377,25 @@ describe("阶段 4 局部对象基础模型", () => {
   });
 
   it("页面提供从宇宙摘要进入星系、恒星系和行星详情的浏览入口", () => {
-    const markup = renderToStaticMarkup(createElement(App));
+    const markup = renderToStaticMarkup(createElement(App, { initialPage: "space" }));
 
-    expect(markup).toContain("探索星系");
+    expect(markup).toContain("星系、恒星系与行星");
     expect(markup).toContain("局部探索");
     expect(markup).toContain("星系列表");
     expect(markup).toContain("恒星系");
     expect(markup).toContain("行星详情");
     expect(markup).toContain("阶段 5 文明入口");
+  });
+
+  it("默认总览通过一级导航进入重型页面，不直接渲染全部页面内容", () => {
+    const markup = renderToStaticMarkup(createElement(App));
+
+    expect(markup).toContain("主页面导航");
+    expect(markup).toContain("创世总览");
+    expect(markup).toContain("宇宙快照");
+    expect(markup).not.toContain("星系列表");
+    expect(markup).not.toContain("文明详情");
+    expect(markup).not.toContain("文明历史");
   });
 });
 
@@ -442,7 +453,7 @@ describe("阶段 5 文明演化与神话生成", () => {
   });
 
   it("页面提供文明演化、文明详情、神话系统和文明历史入口", () => {
-    const markup = renderToStaticMarkup(createElement(App));
+    const markup = renderToStaticMarkup(createElement(App, { initialPage: "civilizations" }));
 
     expect(markup).toContain("文明演化");
     expect(markup).toContain("文明详情");
