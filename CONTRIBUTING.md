@@ -54,6 +54,8 @@ src/sim/metrics     宇宙指标生成
 src/sim/timeline    纪元事件生成
 src/sim/galaxies    星系、恒星系、行星和生物圈样本生成
 src/sim/content     法则、时间线、空间对象和后续阶段的内容素材池
+src/ui              页面标签、选择器和派生视图数据
+src/components      可复用展示组件
 src/sim/names       名称、摘要和描述生成
 src/sim/share       分享码与链接参数恢复
 src/sim/universe    UniverseSummary 总生成入口
@@ -94,6 +96,7 @@ docs/               阶段规格与项目文档
 - 事件数量和事件覆盖范围。
 - 分享码或链接参数能恢复复现信息。
 - `src/sim/**` 中没有直接使用 `Math.random()`。
+- 生成规则内容哈希门禁保持通过；如果本次变更会影响生成结果，应同步更新 `RULESET_VERSION`、`RULESET_SHORT_CODE`、相关文档和测试基线。
 
 如果新增阶段验收要求，请把测试补到 `tests/` 中。
 

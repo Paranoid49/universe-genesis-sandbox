@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -37,6 +38,7 @@ const fixedSeeds = [
 const lawDomainIds: LawDomainId[] = ["physics", "magic", "life", "consciousness", "divinity", "causality"];
 const metricIds: MetricId[] = ["age", "stability", "lifePotential", "civilizationPotential", "magicIntensity", "divineActivity", "causalityIntegrity"];
 const eraIds: EraId[] = ["creation", "stars", "elements", "life", "civilization", "myth", "ascension", "ending"];
+const expectedRulesetContentHash = "c5a88582db6f5da992de6b4b4a110470dbd4a2ab9d081ae04689f811a79184e6";
 
 describe("阶段 1 宇宙生成", () => {
   it("同一 seed、模板和规则版本会生成完全一致的宇宙", () => {
@@ -119,6 +121,19 @@ describe("阶段 1 宇宙生成", () => {
     const offenders = listSourceFiles(sourceRoot).filter((file) => readFileSync(file, "utf8").includes("Math.random"));
 
     expect(offenders).toEqual([]);
+  });
+});
+
+describe("规则版本门禁", () => {
+  it("生成规则内容变化时必须同步更新规则版本哈希", () => {
+    const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../src/sim");
+    const actualHash = rulesetContentHash(sourceRoot);
+
+    if (actualHash !== expectedRulesetContentHash) {
+      throw new Error(`生成规则内容哈希已变化。若本次变更会影响生成结果，请更新 RULESET_VERSION、RULESET_SHORT_CODE 和该测试基线。当前哈希：${actualHash}`);
+    }
+
+    expect(actualHash).toBe(expectedRulesetContentHash);
   });
 });
 
@@ -427,4 +442,16 @@ function listSourceFiles(root: string): string[] {
     }
     return fullPath.endsWith(".ts") || fullPath.endsWith(".tsx") ? [fullPath] : [];
   });
+}
+
+function rulesetContentHash(sourceRoot: string): string {
+  const projectRoot = resolve(sourceRoot, "../..");
+  const hash = createHash("sha256");
+  for (const file of listSourceFiles(sourceRoot).sort()) {
+    hash.update(relative(projectRoot, file).split(sep).join("/"));
+    hash.update("\n");
+    hash.update(readFileSync(file));
+    hash.update("\n");
+  }
+  return hash.digest("hex");
 }
