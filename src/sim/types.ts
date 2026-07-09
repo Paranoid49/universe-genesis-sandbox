@@ -1,5 +1,5 @@
-export const RULESET_VERSION = "ugs-ruleset@0.4.0";
-export const RULESET_SHORT_CODE = "UGS04";
+export const RULESET_VERSION = "ugs-ruleset@0.5.0";
+export const RULESET_SHORT_CODE = "UGS05";
 
 export type UniverseTemplateId =
   | "hard_science"
@@ -215,6 +215,37 @@ export type CivilizationFate =
   | "symbiosis"
   | "unknown";
 
+export type CivilizationPath =
+  | "tribal"
+  | "city_state"
+  | "planetary"
+  | "galactic"
+  | "arcane_empire"
+  | "theocracy"
+  | "collective_mind"
+  | "ascended"
+  | "lost";
+
+export type MythologyType =
+  | "none"
+  | "creator_deity"
+  | "nature_deity"
+  | "faith_deity"
+  | "stellar_deity"
+  | "black_hole_deity"
+  | "death_or_dream_deity"
+  | "machine_deity";
+
+export type CivilizationEventType =
+  | "first_fire_or_language"
+  | "first_magic"
+  | "first_astronomy"
+  | "first_deity_contact"
+  | "world_war"
+  | "star_voyage"
+  | "ascension_rite"
+  | "extinction";
+
 export type CivilizationSeed = {
   originPlanetId: string;
   speciesType: SpeciesType;
@@ -235,6 +266,53 @@ export type Biosphere = {
   magicAdaptation: number;
   civilizationChance: number;
   civilizationSeed?: CivilizationSeed;
+  sourceEventIds: string[];
+  sourceRuleIds: string[];
+};
+
+export type MythologySystem = {
+  type: MythologyType;
+  deityName: string;
+  origin: string;
+  influenceLevel: number;
+  relationToCivilization: string;
+  explanation: string;
+  sourceEventIds: string[];
+  sourceRuleIds: string[];
+};
+
+export type CivilizationEvent = {
+  id: string;
+  ageLabel: string;
+  type: CivilizationEventType;
+  title: string;
+  description: string;
+  impact: number;
+  sourceEventIds: string[];
+  sourceRuleIds: string[];
+  triggeredByCivilizationEventIds: string[];
+};
+
+export type Civilization = {
+  id: string;
+  name: string;
+  originGalaxyId: string;
+  originGalaxyName: string;
+  originStarSystemId: string;
+  originStarSystemName: string;
+  originPlanetId: string;
+  originPlanetName: string;
+  speciesType: SpeciesType;
+  technologyLevel: number;
+  magicLevel: number;
+  faithIntensity: number;
+  expansionDrive: number;
+  stability: number;
+  extinctionRisk: number;
+  path: CivilizationPath;
+  mythology: MythologySystem;
+  fate: CivilizationFate;
+  historyEvents: CivilizationEvent[];
   sourceEventIds: string[];
   sourceRuleIds: string[];
 };
@@ -348,6 +426,7 @@ export type UniverseSummary = {
   timeline: TimelineEvent[];
   timelineImpact: TimelineImpactSummary;
   galaxies: Galaxy[];
+  civilizations: Civilization[];
   explanations: Explanation[];
   observationLog: ObservationLog;
 };

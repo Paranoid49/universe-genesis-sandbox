@@ -1,5 +1,5 @@
 import type { MetricInfluence, UniverseSummary } from "../sim";
-import { interactionKindName, metricName } from "./labels";
+import { civilizationPathName, interactionKindName, metricName, mythologyTypeName } from "./labels";
 
 export type SpaceStats = {
   galaxyCount: number;
@@ -7,6 +7,13 @@ export type SpaceStats = {
   planetCount: number;
   biosphereCount: number;
   civilizationSeedCount: number;
+};
+
+export type CivilizationStats = {
+  civilizationCount: number;
+  pathCount: number;
+  mythologyCount: number;
+  highRiskCount: number;
 };
 
 export function summarizeSpace(universe: UniverseSummary): SpaceStats {
@@ -28,10 +35,29 @@ export function buildSourceLabelMap(universe: UniverseSummary): Map<string, stri
   const interactionEntries = universe.lawInteractions.map((interaction) => [interaction.id, interactionKindName(interaction.kind)] as const);
   const metricEntries = Object.keys(universe.metrics).map((metricId) => [`metric.${metricId}`, metricName(metricId)] as const);
   const eventEntries = universe.timeline.map((event) => [event.id, event.title] as const);
+  const civilizationEntries = universe.civilizations.flatMap((civilization) => [
+    [civilization.id, civilization.name] as const,
+    ...civilization.historyEvents.map((event) => [event.id, event.title] as const),
+  ]);
 
-  return new Map([...lawEntries, ...interactionEntries, ...metricEntries, ...eventEntries]);
+  return new Map([...lawEntries, ...interactionEntries, ...metricEntries, ...eventEntries, ...civilizationEntries]);
 }
 
 export function topInfluences(influences: MetricInfluence[]): MetricInfluence[] {
   return [...influences].sort((left, right) => Math.abs(right.delta) - Math.abs(left.delta)).slice(0, 2);
+}
+
+export function summarizeCivilizations(universe: UniverseSummary): CivilizationStats {
+  return {
+    civilizationCount: universe.civilizations.length,
+    pathCount: new Set(universe.civilizations.map((civilization) => civilization.path)).size,
+    mythologyCount: new Set(universe.civilizations.map((civilization) => civilization.mythology.type)).size,
+    highRiskCount: universe.civilizations.filter((civilization) => civilization.extinctionRisk >= 65).length,
+  };
+}
+
+export function civilizationSignature(universe: UniverseSummary): string {
+  return universe.civilizations
+    .map((civilization) => `${civilization.name}｜${civilizationPathName(civilization.path)}｜${mythologyTypeName(civilization.mythology.type)}｜${civilization.fate}`)
+    .join(" / ");
 }

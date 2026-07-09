@@ -1,5 +1,6 @@
 export { generateUniverse } from "./universe";
 export { generateGalaxies } from "./galaxies";
+export { generateCivilizations } from "./civilizations";
 export { compareUniverseLaws } from "./compare";
 export { decodeShareCode, decodeShareParams } from "./share";
 export { filterTimelineByEra, summarizeTimelineImpact } from "./timeline";
@@ -11,6 +12,10 @@ export type {
   Biosphere,
   BiosphereLevel,
   CivilizationFate,
+  Civilization,
+  CivilizationEvent,
+  CivilizationEventType,
+  CivilizationPath,
   CivilizationSeed,
   EraId,
   GenerateUniverseInput,
@@ -26,6 +31,8 @@ export type {
   LocalGenerationBiasId,
   MetricId,
   MetricInfluence,
+  MythologySystem,
+  MythologyType,
   Planet,
   PlanetType,
   SpeciesType,

@@ -159,6 +159,49 @@ export function civilizationFateName(value: string): string {
   return names[value] ?? value;
 }
 
+export function civilizationPathName(value: string): string {
+  const names: Record<string, string> = {
+    tribal: "原始部落",
+    city_state: "城邦",
+    planetary: "行星文明",
+    galactic: "星系文明",
+    arcane_empire: "魔法帝国",
+    theocracy: "神权文明",
+    collective_mind: "集体意识",
+    ascended: "飞升文明",
+    lost: "失落文明",
+  };
+  return names[value] ?? value;
+}
+
+export function mythologyTypeName(value: string): string {
+  const names: Record<string, string> = {
+    none: "无神",
+    creator_deity: "造物主神",
+    nature_deity: "自然神",
+    faith_deity: "信仰神",
+    stellar_deity: "恒星神",
+    black_hole_deity: "黑洞神",
+    death_or_dream_deity: "死亡或梦境神",
+    machine_deity: "机械神",
+  };
+  return names[value] ?? value;
+}
+
+export function civilizationEventTypeName(value: string): string {
+  const names: Record<string, string> = {
+    first_fire_or_language: "火种与语言",
+    first_magic: "第一次魔法",
+    first_astronomy: "天文观测",
+    first_deity_contact: "接触神明",
+    world_war: "世界战争",
+    star_voyage: "星海远航",
+    ascension_rite: "飞升仪式",
+    extinction: "文明灭绝",
+  };
+  return names[value] ?? value;
+}
+
 export function signed(value: number): string {
   return value > 0 ? `+${value}` : `${value}`;
 }

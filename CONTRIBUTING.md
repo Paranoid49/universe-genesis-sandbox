@@ -12,6 +12,7 @@
 - [docs/phase-2.md](docs/phase-2.md)：结构化法则、法则关系和指标影响来源。
 - [docs/phase-3.md](docs/phase-3.md)：纪元时间线、事件因果和时间线影响摘要。
 - [docs/phase-4.md](docs/phase-4.md)：星系、恒星、行星、生命样本、局部探索路径和阶段 5 前置契约。
+- [docs/phase-5.md](docs/phase-5.md)：文明实体、文明路径、神话系统、文明历史和阶段 6 禁区。
 
 如果你的变更会改变产品范围、数据契约、阶段门禁或用户路径，应先更新对应文档，再改代码。
 
@@ -53,6 +54,7 @@ src/sim/laws        结构化宇宙法则生成
 src/sim/metrics     宇宙指标生成
 src/sim/timeline    纪元事件生成
 src/sim/galaxies    星系、恒星系、行星和生物圈样本生成
+src/sim/civilizations 文明、神话系统和文明历史生成
 src/sim/content     法则、时间线、空间对象和后续阶段的内容素材池
 src/ui              页面标签、选择器和派生视图数据
 src/components      可复用展示组件

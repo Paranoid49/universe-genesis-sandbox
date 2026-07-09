@@ -421,6 +421,8 @@ type CivilizationSeed = {
 
 目标：让生命不止停留在“存在/不存在”，而是能发展出文明、信仰、科技、魔法体系和神话历史。
 
+当前状态：阶段 5 已完成，见 [docs/phase-5.md](phase-5.md)。当前实现已从 `Biosphere.civilizationSeed` 生成独立文明实体、文明路径、神话系统和 8 至 15 条文明历史事件，并在页面中提供文明演化浏览区域。
+
 用户故事：
 
 - 作为用户，我可以看到某个文明如何诞生、扩张、衰落或飞升。
@@ -476,6 +478,8 @@ type CivilizationSeed = {
 type Civilization = {
   id: string
   name: string
+  originGalaxyId: string
+  originStarSystemId: string
   originPlanetId: string
   speciesType: SpeciesType
   technologyLevel: number
@@ -483,7 +487,11 @@ type Civilization = {
   faithIntensity: number
   expansionDrive: number
   stability: number
+  extinctionRisk: number
+  path: CivilizationPath
+  mythology: MythologySystem
   fate: CivilizationFate
+  historyEvents: CivilizationEvent[]
 }
 ```
 
@@ -921,13 +929,13 @@ src/ui
 
 ## 8. 近期可执行任务
 
-阶段 0 至阶段 4 已经建立可复现创世、结构化法则、指标影响追踪、seed 法则对比、30 条以上纪元时间线、事件因果解释、纪元筛选、时间线影响摘要、代表性星系/恒星系/行星/生物圈样本、局部探索路径、阶段 5 文明候选种子、内容池分层和 CI 检查。下一步按以下顺序推进：
+阶段 0 至阶段 5 已经建立可复现创世、结构化法则、指标影响追踪、seed 法则对比、30 条以上纪元时间线、事件因果解释、纪元筛选、时间线影响摘要、代表性星系/恒星系/行星/生物圈样本、文明实体、文明路径、神话系统、文明历史事件、内容池分层和 CI 检查。下一步按以下顺序推进：
 
-1. 定义独立文明实体、文明路径、文明事件和神话系统。
-2. 从 `Biosphere.civilizationSeed` 生成文明样本。
-3. 让文明路径与宇宙法则、时间线影响和起源行星局部环境一致。
-4. 在页面中提供文明详情、文明事件和神话关系浏览。
-5. 增加阶段 5 自动化验收测试，继续验证 seed 复现性。
+1. 先编写阶段 6 规格文档，明确造物主干预与奇迹系统的输入边界。
+2. 定义干预动作、干预代价和干预日志数据结构。
+3. 明确干预如何作为显式输入参与确定性复现。
+4. 设计阶段 6 页面入口，避免破坏现有摘要、局部探索、文明演化和法则浏览路径。
+5. 增加阶段 6 自动化验收测试，继续验证 seed 复现性。
 
 ## 9. 一句话定义
 

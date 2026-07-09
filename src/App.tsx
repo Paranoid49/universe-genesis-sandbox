@@ -16,10 +16,11 @@ import {
   type UniverseTemplateId,
 } from "./sim";
 import { LogColumn, SectionHeader } from "./components/common";
+import { CivilizationPanel } from "./components/CivilizationPanel";
 import { SpaceExplorer } from "./components/SpaceExplorer";
 import { EventDetail, TimelineImpactPanel } from "./components/TimelinePanels";
 import { eraName, eventTypeName, interactionKindName, lawDomainName, metricName, polarityName, signed } from "./ui/labels";
-import { buildSourceLabelMap, summarizeSpace, topInfluences } from "./ui/selectors";
+import { buildSourceLabelMap, summarizeCivilizations, summarizeSpace, topInfluences } from "./ui/selectors";
 
 const initialShare = typeof window !== "undefined" ? decodeShareParams(window.location.search) : undefined;
 const initialSeed = initialShare?.seed ?? "LUX-7F3A-91C2";
@@ -49,6 +50,7 @@ export function App() {
   const [selectedGalaxyId, setSelectedGalaxyId] = useState<string | undefined>();
   const [selectedSystemId, setSelectedSystemId] = useState<string | undefined>();
   const [selectedPlanetId, setSelectedPlanetId] = useState<string | undefined>();
+  const [selectedCivilizationId, setSelectedCivilizationId] = useState<string | undefined>();
   const copyResetTimerRef = useRef<number | undefined>(undefined);
 
   const universe = useMemo(() => generateUniverse({ seed: activeSeed, templateId }), [activeSeed, templateId]);
@@ -58,7 +60,9 @@ export function App() {
   const selectedGalaxy = universe.galaxies.find((galaxy) => galaxy.id === selectedGalaxyId) ?? universe.galaxies[0];
   const selectedSystem = selectedGalaxy?.starSystems.find((system) => system.id === selectedSystemId) ?? selectedGalaxy?.starSystems[0];
   const selectedPlanet = selectedSystem?.planets.find((planet) => planet.id === selectedPlanetId) ?? selectedSystem?.planets[0];
+  const selectedCivilization = universe.civilizations.find((civilization) => civilization.id === selectedCivilizationId) ?? universe.civilizations[0];
   const spaceStats = useMemo(() => summarizeSpace(universe), [universe]);
+  const civilizationStats = useMemo(() => summarizeCivilizations(universe), [universe]);
   const sourceLabelById = useMemo(() => buildSourceLabelMap(universe), [universe]);
 
   useEffect(() => {
@@ -69,6 +73,7 @@ export function App() {
     setSelectedGalaxyId(firstGalaxy?.id);
     setSelectedSystemId(firstSystem?.id);
     setSelectedPlanetId(firstPlanet?.id);
+    setSelectedCivilizationId(universe.civilizations[0]?.id);
   }, [universe.shareCode]);
 
   useEffect(() => {
@@ -137,6 +142,10 @@ export function App() {
 
   function selectPlanet(planet: Planet) {
     setSelectedPlanetId(planet.id);
+  }
+
+  function selectCivilization(civilization: NonNullable<typeof selectedCivilization>) {
+    setSelectedCivilizationId(civilization.id);
   }
 
   function scheduleCopyStateReset() {
@@ -235,6 +244,14 @@ export function App() {
         onSelectGalaxy={selectGalaxy}
         onSelectSystem={selectSystem}
         onSelectPlanet={selectPlanet}
+      />
+
+      <CivilizationPanel
+        universe={universe}
+        stats={civilizationStats}
+        selectedCivilization={selectedCivilization}
+        sourceLabelById={sourceLabelById}
+        onSelectCivilization={selectCivilization}
       />
 
       <section className="dashboard-grid">

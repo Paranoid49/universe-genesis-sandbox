@@ -41,6 +41,7 @@ a {
 .topbar,
 .overview-band,
 .space-panel,
+.civilization-panel,
 .metrics-panel,
 .timeline-panel,
 .laws-panel,
@@ -239,6 +240,12 @@ button:hover,
   border-radius: 8px;
 }
 
+.civilization-panel {
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 8px;
+}
+
 .space-stats {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -246,7 +253,15 @@ button:hover,
   margin-bottom: 14px;
 }
 
-.space-stats div {
+.civilization-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.space-stats div,
+.civilization-stats div {
   display: grid;
   gap: 4px;
   min-height: 72px;
@@ -255,12 +270,14 @@ button:hover,
   background: #26211d;
 }
 
-.space-stats span {
+.space-stats span,
+.civilization-stats span {
   color: #bfb3a4;
   font-size: 0.78rem;
 }
 
-.space-stats strong {
+.space-stats strong,
+.civilization-stats strong {
   color: #7fc9af;
   font-size: 1.45rem;
 }
@@ -271,27 +288,41 @@ button:hover,
   gap: 12px;
 }
 
+.civilization-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.85fr) minmax(360px, 1fr) minmax(360px, 1.1fr);
+  gap: 12px;
+}
+
 .space-list,
-.space-detail {
+.space-detail,
+.civilization-list,
+.civilization-detail,
+.civilization-history {
   min-height: 460px;
   padding: 12px;
   border-radius: 8px;
   background: #211d1a;
 }
 
-.space-list {
+.space-list,
+.civilization-list {
   display: grid;
   align-content: start;
   gap: 10px;
 }
 
-.space-list h4 {
+.space-list h4,
+.civilization-list h4,
+.civilization-history h4 {
   margin: 0;
   color: #e9c46a;
   font-size: 0.94rem;
 }
 
-.space-list > div {
+.space-list > div,
+.civilization-list > div,
+.civilization-history > div {
   display: grid;
   gap: 8px;
   max-height: 360px;
@@ -312,12 +343,23 @@ button:hover,
   text-align: left;
 }
 
-.space-select.active {
+.civilization-select {
+  display: grid;
+  width: 100%;
+  height: auto;
+  min-height: 58px;
+  justify-items: stretch;
+  text-align: left;
+}
+
+.space-select.active,
+.civilization-select.active {
   border-color: rgba(127, 201, 175, 0.72);
   background: #26342f;
 }
 
-.space-select span {
+.space-select span,
+.civilization-select span {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -327,27 +369,36 @@ button:hover,
 }
 
 .space-select small,
+.civilization-select small,
 .space-detail > span,
+.civilization-detail > span,
 .biosphere-block small,
 .civilization-prelude small,
 .civilization-prelude span,
+.mythology-block small,
+.mythology-block span,
 .source-list small {
   color: #bfb3a4;
   line-height: 1.45;
 }
 
-.space-detail {
+.space-detail,
+.civilization-detail {
   display: grid;
   align-content: start;
   gap: 14px;
 }
 
-.space-detail h3 {
+.space-detail h3,
+.civilization-detail h3 {
   margin: 0;
   font-size: 1.7rem;
 }
 
-.space-detail p {
+.space-detail p,
+.civilization-detail p,
+.mythology-block p,
+.civilization-history p {
   color: #ded1c1;
   line-height: 1.6;
 }
@@ -391,7 +442,8 @@ button:hover,
 }
 
 .biosphere-block,
-.civilization-prelude {
+.civilization-prelude,
+.mythology-block {
   display: grid;
   gap: 10px;
   padding: 12px;
@@ -406,8 +458,35 @@ button:hover,
 }
 
 .civilization-prelude b,
-.biosphere-block b {
+.biosphere-block b,
+.mythology-block b {
   color: #e9c46a;
+}
+
+.civilization-history h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.civilization-history article {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #1f1a17;
+}
+
+.civilization-history span {
+  color: #7fc9af;
+  font-size: 0.78rem;
+}
+
+.civilization-empty {
+  padding: 16px;
+  border-radius: 8px;
+  color: #bfb3a4;
+  background: #211d1a;
 }
 
 .source-grid {
@@ -887,16 +966,23 @@ button:hover,
   }
 
   .space-grid,
-  .space-stats {
+  .space-stats,
+  .civilization-grid,
+  .civilization-stats {
     grid-template-columns: 1fr;
   }
 
   .space-list,
-  .space-detail {
+  .space-detail,
+  .civilization-list,
+  .civilization-detail,
+  .civilization-history {
     min-height: unset;
   }
 
-  .space-list > div {
+  .space-list > div,
+  .civilization-list > div,
+  .civilization-history > div {
     max-height: 280px;
   }
 
