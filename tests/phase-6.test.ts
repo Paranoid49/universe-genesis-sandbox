@@ -5,8 +5,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { App } from "../src/App";
 import {
   generateUniverse,
+  decodeShareCode,
+  decodeShareParams,
   miracleDefinitions,
   RULESET_VERSION,
+  UniverseInputError,
   type InterventionInput,
   type MiracleType,
 } from "../src/sim";
@@ -64,6 +67,65 @@ describe("阶段 6 造物主干预与奇迹系统", () => {
     const second = generateUniverse({ seed: fixedSeeds[1], templateId: "mythic", interventions });
 
     expect(second).toEqual(first);
+  });
+
+  it("奇迹会真实修改目标领域对象，而不是只追加描述日志", () => {
+    const base = generateUniverse({ seed: fixedSeeds[0], templateId: "high_magic" });
+    const planet = allPlanets(base)[0];
+    const system = base.galaxies.flatMap((galaxy) => galaxy.starSystems).find((entry) => entry.planets.some((entryPlanet) => entryPlanet.id === planet.id));
+    const civilization = base.civilizations[0];
+    expect(system).toBeDefined();
+    expect(civilization).toBeDefined();
+
+    const interventions: InterventionInput[] = [
+      { id: "domain-planet", miracleType: "bless_planet", targetId: planet.id },
+      { id: "domain-star", miracleType: "stabilize_star", targetId: system!.id },
+      { id: "domain-civilization", miracleType: "grant_magic", targetId: civilization.id },
+    ];
+    const universe = generateUniverse({ seed: fixedSeeds[0], templateId: "high_magic", interventions });
+    const changedPlanet = allPlanets(universe).find((entry) => entry.id === planet.id);
+    const changedSystem = universe.galaxies.flatMap((galaxy) => galaxy.starSystems).find((entry) => entry.id === system!.id);
+    const changedCivilization = universe.civilizations.find((entry) => entry.id === civilization.id);
+
+    expect(changedPlanet!.habitability).toBeGreaterThan(planet.habitability);
+    expect(changedSystem!.stability).toBeGreaterThan(system!.stability);
+    expect(changedCivilization!.magicLevel).toBeGreaterThan(civilization.magicLevel);
+    expect(universe.miracleState.appliedMiracles.flatMap((miracle) => miracle.targetMutations).length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("注入生命会在目标行星形成或强化真实生物圈", () => {
+    const base = generateUniverse({ seed: fixedSeeds[3], templateId: "hard_science" });
+    const target = allPlanets(base).find((planet) => !planet.biosphere) ?? allPlanets(base)[0];
+    const universe = generateUniverse({
+      seed: fixedSeeds[3],
+      templateId: "hard_science",
+      interventions: [{ id: "seed-real-life", miracleType: "seed_life", targetId: target.id }],
+    });
+    const changedTarget = allPlanets(universe).find((planet) => planet.id === target.id);
+
+    expect(changedTarget?.biosphere).toBeDefined();
+    expect(changedTarget!.habitability).toBeGreaterThan(target.habitability);
+  });
+
+  it("分享码和分享链接会完整恢复干预分支", () => {
+    const base = generateUniverse({ seed: fixedSeeds[1], templateId: "mythic" });
+    const interventions = sampleInterventions(base).slice(0, 3);
+    const universe = generateUniverse({ seed: fixedSeeds[1], templateId: "mythic", interventions });
+
+    expect(decodeShareCode(universe.shareCode)?.interventions).toEqual(interventions);
+    expect(decodeShareParams(universe.shareUrl)?.interventions).toEqual(interventions);
+    const decoded = decodeShareParams(universe.shareUrl)!;
+    expect(generateUniverse(decoded)).toEqual(universe);
+  });
+
+  it("无效奇迹类型、重复 ID 和目标类型不匹配会被明确拒绝", () => {
+    expect(() => generateUniverse({ seed: fixedSeeds[0], interventions: [{ id: "bad", miracleType: "unknown" as MiracleType, targetId: "x" }] })).toThrowError(UniverseInputError);
+    expect(() => generateUniverse({ seed: fixedSeeds[0], interventions: [
+      { id: "duplicate", miracleType: "repair_causality", targetId: `universe.${fixedSeeds[0]}` },
+      { id: "duplicate", miracleType: "repair_causality", targetId: `universe.${fixedSeeds[0]}` },
+    ] })).toThrowError(/重复/);
+    expect(() => generateUniverse({ seed: fixedSeeds[0], interventions: [{ id: "wrong-target", miracleType: "bless_planet", targetId: "civ-01" }] })).toThrowError(/找不到/);
+    expect(() => generateUniverse({ seed: fixedSeeds[0], interventions: [{ id: "wrong-universe", miracleType: "repair_causality", targetId: "universe.wrong" }] })).toThrowError(/宇宙级奇迹目标/);
   });
 
   it("奇迹过度使用会触发负面反噬事件", () => {

@@ -1,4 +1,6 @@
 import { miracleDefinitions } from "./content/miracles";
+import { applyInterventionToDomain } from "./intervention-domain";
+import { UniverseInputError } from "./errors";
 import { clamp, round, type RandomStream } from "./random";
 import type {
   Civilization,
@@ -31,6 +33,8 @@ type InterventionContext = {
 type InterventionResult = {
   metrics: UniverseMetrics;
   timeline: TimelineEvent[];
+  galaxies: Galaxy[];
+  civilizations: Civilization[];
   miracleState: MiracleState;
 };
 
@@ -51,12 +55,21 @@ export function applyInterventions(context: InterventionContext, interventions: 
   let spentMiraclePoints = 0;
   let causalityStrain = 0;
   let lawPressure = 0;
+  let domainState = {
+    galaxies: context.galaxies,
+    civilizations: context.civilizations,
+  };
 
   requestedInterventions.forEach((input, index) => {
     const definition = miracleDefinitionFor(input.miracleType);
     const target = findTarget(context, definition.targetKind, input.targetId);
     const miracleId = stableMiracleId(input, index);
     const immediateEffects = interventionEffects(definition);
+    const domainResult = applyInterventionToDomain(domainState, input, definition, miracleId, rng.fork(`domain.${index + 1}`));
+    domainState = {
+      galaxies: domainResult.galaxies,
+      civilizations: domainResult.civilizations,
+    };
     const eventId = `miracle-event-${String(index + 1).padStart(2, "0")}`;
     const miracle: Miracle = {
       id: miracleId,
@@ -68,6 +81,7 @@ export function applyInterventions(context: InterventionContext, interventions: 
       cost: definition.cost,
       immediateEffects,
       probabilityShifts: [definition.probabilityShift],
+      targetMutations: domainResult.mutations,
       longTermRisks: definition.longTermRisks,
     };
     const event = createMiracleEvent(context.timeline, miracle, target, eventId, index, rng);
@@ -121,12 +135,18 @@ export function applyInterventions(context: InterventionContext, interventions: 
   return {
     metrics: finalMetrics,
     timeline: finalTimeline,
+    galaxies: domainState.galaxies,
+    civilizations: domainState.civilizations,
     miracleState,
   };
 }
 
 function miracleDefinitionFor(type: InterventionInput["miracleType"]): MiracleDefinition {
-  return miracleDefinitions.find((definition) => definition.type === type) ?? miracleDefinitions[0];
+  const definition = miracleDefinitions.find((entry) => entry.type === type);
+  if (!definition) {
+    throw new UniverseInputError("INVALID_INTERVENTION", "interventions.miracleType", `未知奇迹类型：${type}。`);
+  }
+  return definition;
 }
 
 function stableMiracleId(input: InterventionInput, index: number): string {
@@ -230,8 +250,12 @@ function createBacklashEvent(timeline: TimelineEvent[], resultEvents: TimelineEv
 
 function findTarget(context: InterventionContext, kind: MiracleTargetKind, targetId: string): TargetInfo {
   if (kind === "universe") {
+    const expectedTargetId = `universe.${context.seed}`;
+    if (targetId !== expectedTargetId) {
+      throw new UniverseInputError("INVALID_TARGET", "interventions.targetId", `宇宙级奇迹目标必须是 ${expectedTargetId}。`);
+    }
     return {
-      id: targetId || `universe.${context.seed}`,
+      id: targetId,
       label: "整个宇宙",
       kind,
       location: "宇宙整体",

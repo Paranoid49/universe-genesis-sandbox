@@ -58,6 +58,8 @@ src/sim/timeline    纪元事件生成
 src/sim/galaxies    星系、恒星系、行星和生物圈样本生成
 src/sim/civilizations 文明、神话系统和文明历史生成
 src/sim/content     法则、时间线、空间对象和后续阶段的内容素材池
+src/sim/contracts   稳定跨模块数据契约
+src/sim/recipes     权重公式、阈值和路径决策
 src/ui              页面标签、选择器和派生视图数据
 src/components      可复用展示组件
 src/sim/names       名称、摘要和描述生成
@@ -90,6 +92,8 @@ docs/               阶段规格与项目文档
 - 阶段 4 局部对象生成应消费 `UniverseSummary.timelineImpact`，不要从页面文案反推生成倾向。
 - 阶段 5 文明生成应从 `Biosphere.civilizationSeed` 或明确的生命行星来源派生，不要脱离阶段 4 局部对象凭空生成。
 - 阶段 6 干预必须来自显式 `InterventionInput[]`，不要读取浏览器时间、本地存储或任何不可复现输入。
+- 阶段 6 局部奇迹必须产生真实目标字段变化和 `TargetMutation`，不能只生成叙述日志。
+- 干预分享格式必须携带版本号，损坏载荷必须警告并回退。
 - 阶段 6 只能输出结构化干预数据，不要提前实现阶段 7 的可视化观察台。
 
 ## 测试要求
@@ -103,6 +107,9 @@ docs/               阶段规格与项目文档
 - 分享码或链接参数能恢复复现信息。
 - `src/sim/**` 中没有直接使用 `Math.random()`。
 - 生成规则内容哈希门禁保持通过；如果本次变更会影响生成结果，应同步更新 `RULESET_VERSION`、`RULESET_SHORT_CODE`、相关文档和测试基线。
+- ESLint、架构依赖、覆盖率、组件交互、键盘、无障碍和构建体积门禁保持通过。
+
+完整门禁与阈值见 [docs/quality-gates.md](docs/quality-gates.md)，非功能要求见 [docs/non-functional-requirements.md](docs/non-functional-requirements.md)。
 
 如果新增阶段验收要求，请把测试补到 `tests/` 中。
 

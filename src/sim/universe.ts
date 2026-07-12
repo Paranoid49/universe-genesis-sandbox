@@ -10,8 +10,10 @@ import { createShareCode, createShareText, createShareUrl } from "./share";
 import { getTemplate } from "./templates";
 import { generateTimeline, summarizeTimelineImpact } from "./timeline";
 import { RULESET_SHORT_CODE, RULESET_VERSION, type GenerateUniverseInput, type UniverseSummary } from "./types";
+import { assertGenerateUniverseInput } from "./validation";
 
 export function generateUniverse(input: GenerateUniverseInput): UniverseSummary {
+  assertGenerateUniverseInput(input);
   const seed = normalizeSeed(input.seed);
   const template = getTemplate(input.templateId);
   const root = createRandomStream(`${RULESET_VERSION}:${template.id}:${seed}`, "root");
@@ -41,8 +43,8 @@ export function generateUniverse(input: GenerateUniverseInput): UniverseSummary 
   const finalTimelineImpact = summarizeTimelineImpact(finalTimeline, finalMetrics);
   const explanations = generateExplanations(template, laws, finalMetrics, finalTimeline);
   const observationLog = generateObservationLog(finalTimeline, finalMetrics, laws);
-  const shareCode = createShareCode(seed, template.id);
-  const shareUrl = createShareUrl(seed, template.id);
+  const shareCode = createShareCode(seed, template.id, input.interventions);
+  const shareUrl = createShareUrl(seed, template.id, input.interventions);
 
   const summary: UniverseSummary = {
     seed,
@@ -63,8 +65,8 @@ export function generateUniverse(input: GenerateUniverseInput): UniverseSummary 
     lawInteractions,
     timeline: finalTimeline,
     timelineImpact: finalTimelineImpact,
-    galaxies,
-    civilizations,
+    galaxies: interventionResult.galaxies,
+    civilizations: interventionResult.civilizations,
     miracleState: interventionResult.miracleState,
     explanations,
     observationLog,

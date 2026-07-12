@@ -124,6 +124,11 @@ export function MiraclePanel({
                 </span>
                 <b>{entry.directResult}</b>
                 <p>{entry.longTermConsequence}</p>
+                {(state.appliedMiracles.find((miracle) => miracle.id === entry.miracleId)?.targetMutations ?? []).map((mutation) => (
+                  <small key={`${mutation.targetId}-${mutation.field}`}>
+                    实体变化：{mutation.field} 从 {String(mutation.before ?? "无")} 变为 {String(mutation.after ?? "无")}，{mutation.explanation}
+                  </small>
+                ))}
               </article>
             ))
           ) : (

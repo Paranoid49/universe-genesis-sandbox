@@ -4,9 +4,11 @@ export { generateCivilizations } from "./civilizations";
 export { compareUniverseLaws } from "./compare";
 export { miracleDefinitions } from "./content/miracles";
 export { decodeShareCode, decodeShareParams } from "./share";
+export type { DecodedShareCode } from "./share";
 export { filterTimelineByEra, summarizeTimelineImpact } from "./timeline";
 export { DEFAULT_TEMPLATE_ID, getTemplate, getTemplateByShortCode, UNIVERSE_TEMPLATES } from "./templates";
 export { formatSeed, normalizeSeed } from "./random";
+export { UniverseInputError } from "./errors";
 export { RULESET_SHORT_CODE, RULESET_VERSION } from "./types";
 export type {
   Explanation,
@@ -51,6 +53,7 @@ export type {
   StarSystem,
   StarSystemType,
   StructuredLaw,
+  TargetMutation,
   TimelineEraProfile,
   TimelineEvent,
   TimelineImpactSummary,

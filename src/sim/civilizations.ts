@@ -8,7 +8,6 @@ import {
   deityNameCores,
   mythologyProfiles,
   type CivilizationEventBlueprint,
-  type CivilizationPathProfile,
   type MythologyProfile,
 } from "./content/civilizations";
 import type {
@@ -26,6 +25,12 @@ import type {
   UniverseLaws,
   UniverseMetrics,
 } from "./types";
+import {
+  civilizationEventWeight,
+  civilizationFate,
+  civilizationPathWeight,
+  type CivilizationRecipeValues,
+} from "./recipes/civilization";
 
 type CivilizationGenerationContext = {
   laws: UniverseLaws;
@@ -40,14 +45,7 @@ type CivilizationCandidate = {
   planet: Planet;
 };
 
-type CivilizationValues = {
-  technologyLevel: number;
-  magicLevel: number;
-  faithIntensity: number;
-  expansionDrive: number;
-  stability: number;
-  extinctionRisk: number;
-};
+type CivilizationValues = CivilizationRecipeValues;
 
 export function generateCivilizations(context: CivilizationGenerationContext, rng: RandomStream): Civilization[] {
   const candidates = civilizationCandidates(context.galaxies);
@@ -63,7 +61,7 @@ function generateCivilization(context: CivilizationGenerationContext, candidate:
   const values = civilizationValues(context, candidate, rng);
   const path = pickCivilizationPath(context, values, rng);
   const mythology = generateMythology(context, candidate, values, path, rng.fork("mythology"));
-  const fate = civilizationFateFor(path, values, seed.fate);
+  const fate = civilizationFate(path, values, seed.fate);
   const sourceEventIds = uniqueIds([...seed.sourceEventIds, ...candidate.planet.sourceEventIds, ...sourceEvents(context.timelineImpact, 3)]).slice(0, 6);
   const sourceRuleIds = uniqueIds([
     ...seed.sourceRuleIds,
@@ -147,33 +145,9 @@ function pickCivilizationPath(context: CivilizationGenerationContext, values: Ci
   if (values.technologyLevel >= 34) return rng.bool(0.65) ? "city_state" : "tribal";
   const weights = civilizationPathProfiles.map((profile) => ({
     item: profile.id,
-    weight: pathWeight(profile, values, { consciousness, divinity, magic }),
+    weight: civilizationPathWeight(profile, values, { consciousness, divinity, magic }),
   }));
   return rng.weighted(weights);
-}
-
-function pathWeight(
-  profile: CivilizationPathProfile,
-  values: CivilizationValues,
-  laws: { consciousness: number; divinity: number; magic: number },
-): number {
-  const baseline =
-    1 +
-    Math.max(0, values.technologyLevel + profile.technologyBias - 50) / 18 +
-    Math.max(0, values.magicLevel + profile.magicBias - 50) / 18 +
-    Math.max(0, values.faithIntensity + profile.faithBias - 50) / 18 +
-    Math.max(0, values.expansionDrive + profile.expansionBias - 50) / 18 +
-    Math.max(0, values.stability + profile.stabilityBias - 50) / 18;
-
-  if (profile.id === "tribal") return baseline + Math.max(0, 42 - values.technologyLevel) / 8;
-  if (profile.id === "city_state") return baseline + Math.max(0, 58 - Math.abs(values.technologyLevel - 48)) / 20;
-  if (profile.id === "planetary") return baseline + values.technologyLevel / 45 + values.stability / 70;
-  if (profile.id === "galactic") return baseline + values.technologyLevel / 35 + values.expansionDrive / 30;
-  if (profile.id === "arcane_empire") return baseline + values.magicLevel / 28 + laws.magic / 38;
-  if (profile.id === "theocracy") return baseline + values.faithIntensity / 28 + laws.divinity / 36;
-  if (profile.id === "collective_mind") return baseline + laws.consciousness / 28 + values.stability / 48;
-  if (profile.id === "ascended") return baseline + (values.technologyLevel + values.magicLevel + values.faithIntensity) / 85;
-  return baseline + values.extinctionRisk / 25 + Math.max(0, 45 - values.stability) / 8;
 }
 
 function generateMythology(
@@ -250,17 +224,6 @@ function mythologyRelation(type: MythologyType, path: CivilizationPath, values: 
   if (path === "collective_mind") return "神话系统被集体意识重新解释。";
   if (values.faithIntensity >= 70) return "神话系统深度塑造法律、战争和远航。";
   return "神话系统主要提供仪式、禁忌和历史解释。";
-}
-
-function civilizationFateFor(path: CivilizationPath, values: CivilizationValues, seedFate: CivilizationFate): CivilizationFate {
-  if (values.extinctionRisk >= 88 || path === "lost") return "collapse";
-  if (path === "ascended" || path === "arcane_empire" || (values.magicLevel >= 48 && values.faithIntensity >= 38)) return "ascension";
-  if (path === "collective_mind" || (values.stability >= 50 && (values.faithIntensity >= 30 || path === "planetary"))) return "symbiosis";
-  if (values.expansionDrive < 60 && values.technologyLevel < 55) return "stagnation";
-  if (path === "galactic" && values.stability >= 52 && values.extinctionRisk < 62) return "unknown";
-  if (path === "galactic" || (values.expansionDrive >= 55 && values.technologyLevel >= 40)) return "expansion";
-  if (values.extinctionRisk >= 72 || seedFate === "collapse") return "collapse";
-  return seedFate === "expansion" ? "unknown" : seedFate;
 }
 
 function civilizationName(path: CivilizationPath, rng: RandomStream): string {
@@ -340,28 +303,9 @@ function pickEventBlueprint(
   return rng.weighted(
     civilizationEventBlueprints.map((blueprint) => ({
       item: blueprint,
-      weight: eventWeight(blueprint.type, civilization),
+      weight: civilizationEventWeight(blueprint.type, civilization),
     })),
   );
-}
-
-function eventWeight(
-  type: CivilizationEventType,
-  civilization: {
-    path: CivilizationPath;
-    mythology: MythologySystem;
-    fate: CivilizationFate;
-    values: CivilizationValues;
-  },
-): number {
-  if (type === "first_fire_or_language") return 2;
-  if (type === "first_magic") return 1 + civilization.values.magicLevel / 24;
-  if (type === "first_astronomy") return 1 + civilization.values.technologyLevel / 26;
-  if (type === "first_deity_contact") return 1 + civilization.values.faithIntensity / 22 + (civilization.mythology.type === "none" ? -0.8 : 1);
-  if (type === "world_war") return 1 + civilization.values.extinctionRisk / 22;
-  if (type === "star_voyage") return 1 + civilization.values.expansionDrive / 22 + (civilization.path === "galactic" ? 2 : 0);
-  if (type === "ascension_rite") return 1 + (civilization.fate === "ascension" ? 5 : 0) + civilization.values.magicLevel / 45;
-  return 1 + (civilization.fate === "collapse" ? 5 : 0) + civilization.values.extinctionRisk / 24;
 }
 
 function eventDescription(

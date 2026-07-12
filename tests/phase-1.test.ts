@@ -52,6 +52,7 @@ describe("阶段 1 宇宙生成", () => {
       seed: universe.seed,
       templateId: universe.templateId,
       rulesetVersion: universe.rulesetVersion,
+      interventions: [],
       warnings: [],
     });
 
@@ -59,6 +60,7 @@ describe("阶段 1 宇宙生成", () => {
       seed: universe.seed,
       templateId: universe.templateId,
       rulesetVersion: universe.rulesetVersion,
+      interventions: [],
       warnings: [],
     });
   });
@@ -70,6 +72,17 @@ describe("阶段 1 宇宙生成", () => {
     expect(decoded?.templateId).toBe("high_magic");
     expect(decoded?.rulesetVersion).toBe(RULESET_VERSION);
     expect(decoded?.warnings.length).toBe(2);
+  });
+
+  it("损坏的干预分享载荷会被忽略并给出提示", () => {
+    const decoded = decodeShareParams("?s=LUX7F3A91C2&t=HM&v=UGS061&iv=1&i=broken");
+    expect(decoded?.interventions).toEqual([]);
+    expect(decoded?.warnings.some((warning) => warning.includes("干预分享数据损坏"))).toBe(true);
+  });
+
+  it("空 Seed 和未知模板会被运行时边界拒绝", () => {
+    expect(() => generateUniverse({ seed: "" })).toThrowError(/Seed/);
+    expect(() => generateUniverse({ seed: "VALID", templateId: "unknown" as never })).toThrowError(/未知宇宙模板/);
   });
 
   it("非当前规则短码不做兼容解析，只按当前规则提示处理", () => {
@@ -90,7 +103,8 @@ describe("阶段 1 宇宙生成", () => {
       expectCompleteUniverse(universe);
     }
     const elapsed = performance.now() - start;
-    expect(elapsed).toBeLessThan(2000);
+    const performanceBudget = process.env.npm_lifecycle_event === "test:coverage" ? 5000 : 2000;
+    expect(elapsed).toBeLessThan(performanceBudget);
   });
 
   it("模拟核心不直接使用 Math.random", () => {

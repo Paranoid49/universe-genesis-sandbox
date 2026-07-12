@@ -1,23 +1,13 @@
-import { BarChart3, BookOpen, Clipboard, Dices, History, Link, ListFilter, RefreshCcw, Scale, ScrollText, Sparkles, Telescope, UsersRound } from "lucide-react";
-import { RULESET_VERSION, UNIVERSE_TEMPLATES, type UniverseTemplateId } from "./sim";
+import { Link, ListFilter, RefreshCcw, Scale, Sparkles, Telescope, UsersRound } from "lucide-react";
 import { LogColumn, SectionHeader } from "./components/common";
 import { CivilizationPanel } from "./components/CivilizationPanel";
+import { PageNavigation, UniverseToolbar } from "./components/AppChrome";
 import { MiraclePanel } from "./components/MiraclePanel";
 import { SpaceExplorer } from "./components/SpaceExplorer";
 import { EventDetail, TimelineImpactPanel } from "./components/TimelinePanels";
 import { eraName, eventTypeName, interactionKindName, lawDomainName, metricName, polarityName, signed } from "./ui/labels";
 import { topInfluences } from "./ui/selectors";
 import { eraFilterOptions, useUniverseAppModel, type AppPageId } from "./ui/useUniverseAppModel";
-
-const appPageOptions: Array<{ id: AppPageId; label: string; description: string; icon: typeof BarChart3 }> = [
-  { id: "overview", label: "概览", description: "宇宙摘要与指标", icon: BarChart3 },
-  { id: "space", label: "星系", description: "星系、恒星系与行星", icon: Telescope },
-  { id: "civilizations", label: "文明", description: "文明演化与神话", icon: UsersRound },
-  { id: "miracles", label: "干预", description: "造物主干预与奇迹", icon: Sparkles },
-  { id: "timeline", label: "纪元", description: "时间线与阶段影响", icon: History },
-  { id: "laws", label: "法则", description: "法则、关系与对比", icon: BookOpen },
-  { id: "logs", label: "日志", description: "观察记录与终局", icon: ScrollText },
-];
 
 type AppProps = {
   initialPage?: AppPageId;
@@ -68,65 +58,17 @@ export function App({ initialPage = "overview" }: AppProps = {}) {
 
   return (
     <main className="app-shell">
-      <section className="topbar" aria-label="创世工具栏">
-        <div className="brand-block">
-          <span className="brand-mark"><Sparkles size={18} /></span>
-          <div>
-            <h1>Universe Genesis Sandbox</h1>
-            <p>{RULESET_VERSION}</p>
-          </div>
-        </div>
-
-        <div className="tool-strip">
-          <label className="seed-field">
-            <span>Seed</span>
-            <input value={draftSeed} onChange={(event) => setDraftSeed(event.target.value)} />
-          </label>
-
-          <label className="template-field">
-            <span>模板</span>
-            <select value={templateId} onChange={(event) => setTemplateId(event.target.value as UniverseTemplateId)}>
-              {UNIVERSE_TEMPLATES.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <button className="primary-action" type="button" onClick={createUniverse} title="按当前 seed 创世">
-            <Sparkles size={17} />
-            创世
-          </button>
-          <button className="icon-action" type="button" onClick={randomizeSeed} title="随机 seed">
-            <Dices size={17} />
-            随机
-          </button>
-          <button className="icon-action" type="button" onClick={copyShare} title="复制分享文本和链接">
-            <Clipboard size={17} />
-            {copyState}
-          </button>
-        </div>
-      </section>
-
-      <nav className="page-navigation" aria-label="主页面导航">
-        {appPageOptions.map((page) => {
-          const Icon = page.icon;
-          return (
-            <button
-              className={activePage === page.id ? "active" : ""}
-              key={page.id}
-              type="button"
-              onClick={() => setActivePage(page.id)}
-              title={page.description}
-            >
-              <Icon size={17} />
-              <span>{page.label}</span>
-              <small>{page.description}</small>
-            </button>
-          );
-        })}
-      </nav>
+      <UniverseToolbar
+        draftSeed={draftSeed}
+        templateId={templateId}
+        copyState={copyState}
+        onDraftSeedChange={setDraftSeed}
+        onTemplateChange={setTemplateId}
+        onCreate={createUniverse}
+        onRandomize={randomizeSeed}
+        onCopy={copyShare}
+      />
+      <PageNavigation activePage={activePage} onChange={setActivePage} />
 
       {activePage === "overview" && (
         <section className="page-stack" aria-label="创世总览">
@@ -348,7 +290,7 @@ export function App({ initialPage = "overview" }: AppProps = {}) {
               </article>
             ))}
           </div>
-          <div className="comparison-panel" aria-label="seed 法则对比">
+          {comparison && <div className="comparison-panel" aria-label="seed 法则对比">
             <SectionHeader icon={<Scale size={18} />} title="Seed 法则对比" text={comparison.summary} />
             <div className="compare-controls">
               <label>
@@ -375,7 +317,7 @@ export function App({ initialPage = "overview" }: AppProps = {}) {
                 </article>
               ))}
             </div>
-          </div>
+          </div>}
         </section>
       )}
 
