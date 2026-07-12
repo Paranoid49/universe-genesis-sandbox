@@ -244,7 +244,7 @@ export function App({ initialPage = "overview", search }: AppProps = {}) {
       {activePage === "laws" && (
         <section className="laws-panel" aria-label="宇宙法则">
           <SectionHeader icon={<RefreshCcw size={18} />} title="法则与解释" text="结构化法则会影响指标与事件" />
-          <div className="law-list">
+          <div className="law-list" tabIndex={0} aria-label="宇宙法则列表">
             {Object.values(universe.laws).map((law) => (
               <article className="law-row" key={law.id}>
                 <div className="law-heading">
@@ -281,7 +281,7 @@ export function App({ initialPage = "overview", search }: AppProps = {}) {
             ))}
           </div>
           <div className="interaction-list">
-            <h4>法则关系</h4>
+            <h3>法则关系</h3>
             {universe.lawInteractions.map((interaction) => (
               <article key={interaction.id}>
                 <div>

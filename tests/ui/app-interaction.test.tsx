@@ -93,7 +93,7 @@ describe("应用关键交互", () => {
     expect(await screen.findByText("我的测试宇宙")).toBeTruthy();
     expect(screen.getByRole("status").textContent).toContain("新增 1 条，更新 0 条");
     await user.click(screen.getByRole("button", { name: "恢复" }));
-    expect(screen.getByRole("heading", { level: 2 })).toBeTruthy();
+    expect(document.querySelector(".universe-title h2")).toBeTruthy();
     expect(screen.getByRole("textbox", { name: "Seed" }).getAttribute("value")).toBe("LUX-7F3A-91C2");
   });
 
@@ -150,12 +150,12 @@ describe("应用关键交互", () => {
   it("空 Seed 会显示错误并保留当前宇宙，修正后可以继续创世", async () => {
     const user = userEvent.setup();
     render(<App />);
-    const universeName = screen.getByRole("heading", { level: 2 }).textContent;
+    const universeName = document.querySelector(".universe-title h2")?.textContent;
     const seedInput = screen.getByRole("textbox", { name: "Seed" });
     await user.clear(seedInput);
     await user.click(screen.getByRole("button", { name: "创世" }));
     expect(screen.getByRole("alert").textContent).toContain("Seed");
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(universeName);
+    expect(document.querySelector(".universe-title h2")?.textContent).toBe(universeName);
 
     await user.type(seedInput, "RECOVER-001");
     await user.click(screen.getByRole("button", { name: "创世" }));

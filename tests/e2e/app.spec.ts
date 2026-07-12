@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 
 test("非法 Seed 会显示错误且修正后可以恢复", async ({ page }) => {
   await page.goto("/");
-  const heading = page.getByRole("heading", { level: 2 });
+  const heading = page.locator(".universe-title h2");
   const originalName = await heading.textContent();
   const seed = page.getByRole("textbox", { name: "Seed" });
   await seed.fill("");
@@ -67,8 +67,8 @@ test("本地图书馆可以跨刷新保存并恢复宇宙", async ({ page }) => 
   await page.reload();
   await page.getByTitle("本地存档、收藏与恢复").click();
   await expect(page.locator(".library-list article")).toHaveCount(1);
-  await page.getByRole("button", { name: "恢复" }).click();
-  await expect(page.getByRole("heading", { level: 2 })).toBeVisible();
+  await page.getByRole("button", { name: "恢复", exact: true }).click();
+  await expect(page.locator(".universe-title h2")).toBeVisible();
 });
 
 test("360 像素图书馆无溢出并通过真实无障碍扫描", async ({ page }) => {

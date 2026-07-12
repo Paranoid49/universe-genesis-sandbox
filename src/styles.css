@@ -1281,6 +1281,7 @@ button:hover,
   stroke-width: 1.2;
 }
 
+.observation-node:focus .node-core,
 .observation-node:focus-visible .node-core {
   stroke: #ffffff;
   stroke-width: 1.8;

@@ -5,7 +5,7 @@ export function SectionHeader({ icon, title, text }: { icon: ReactNode; title: s
     <header className="section-header">
       <div>{icon}</div>
       <div>
-        <h3>{title}</h3>
+        <h2>{title}</h2>
         <p>{text}</p>
       </div>
     </header>
