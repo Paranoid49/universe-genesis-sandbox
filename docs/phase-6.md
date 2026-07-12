@@ -97,6 +97,7 @@ type MiracleState = {
 ```ts
 type GenerateUniverseInput = {
   seed: string
+  rulesetVersion: string
   templateId?: UniverseTemplateId
   interventions?: InterventionInput[]
 }
@@ -130,7 +131,7 @@ type GenerateUniverseInput = {
 - 有干预时，系统按输入顺序应用奇迹。
 - 每个奇迹生成一条可追踪的时间线结果事件。
 - 每个奇迹会改变至少一个指标或一个未来事件概率。
-- 具有局部目标的奇迹必须真实修改目标领域对象，并记录修改前后的 `TargetMutation`。
+- 具有局部目标的奇迹必须真实修改目标领域对象，并通过递归状态差异记录全部修改前后的 `TargetMutation`。
 - 干预日志 ID、奇迹 ID 和结果事件 ID 必须稳定。
 - 同一 `seed + templateId + rulesetVersion + InterventionInput[]` 必须生成同一干预后宇宙。
 - 过度使用奇迹会进入压力或反噬状态，并追加负面后果事件。

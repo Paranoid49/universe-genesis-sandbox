@@ -137,6 +137,18 @@ h1 {
   gap: 10px;
 }
 
+.input-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: #ffb4a2;
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+input[aria-invalid="true"] {
+  border-color: #e76f51;
+}
+
 .seed-field,
 .template-field {
   display: grid;

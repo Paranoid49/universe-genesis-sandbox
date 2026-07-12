@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { App } from "../src/App";
-import { generateUniverse, UNIVERSE_TEMPLATES } from "../src/sim";
+import { App, type AppProps } from "../src/App";
+import { generateUniverse, RULESET_VERSION, UNIVERSE_TEMPLATES } from "../src/sim";
 import {
   allPlanets,
   allStructuredLaws,
@@ -12,8 +12,8 @@ import {
 
 describe("阶段 5 文明演化与神话生成", () => {
   it("文明实体从生命行星的文明候选种子派生，并保持同 seed 完全复现", () => {
-    const first = generateUniverse({ seed: fixedSeeds[0], templateId: "high_magic" });
-    const second = generateUniverse({ seed: fixedSeeds[0], templateId: "high_magic" });
+    const first = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], templateId: "high_magic" });
+    const second = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], templateId: "high_magic" });
     const candidatePlanetIds = new Set(
       allPlanets(first)
         .filter((planet) => planet.biosphere?.civilizationSeed)
@@ -27,7 +27,7 @@ describe("阶段 5 文明演化与神话生成", () => {
   });
 
   it("文明路径、神话系统和文明历史都能追踪到已有来源", () => {
-    const universe = generateUniverse({ seed: fixedSeeds[1], templateId: "mythic" });
+    const universe = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[1], templateId: "mythic" });
     const eventIds = new Set(universe.timeline.map((event) => event.id));
     const ruleIds = new Set(allStructuredLaws(universe).map((rule) => rule.id));
 
@@ -54,7 +54,7 @@ describe("阶段 5 文明演化与神话生成", () => {
     const fates = new Set<string>();
     for (const template of UNIVERSE_TEMPLATES) {
       for (const seed of fixedSeeds) {
-        for (const civilization of generateUniverse({ seed, templateId: template.id }).civilizations) {
+        for (const civilization of generateUniverse({ rulesetVersion: RULESET_VERSION, seed, templateId: template.id }).civilizations) {
           fates.add(civilization.fate);
         }
       }
@@ -64,7 +64,7 @@ describe("阶段 5 文明演化与神话生成", () => {
   });
 
   it("页面提供文明演化、文明详情、神话系统和文明历史入口", () => {
-    const markup = renderToStaticMarkup(createElement(App, { initialPage: "civilizations" }));
+    const markup = renderToStaticMarkup(createElement<AppProps>(App, { initialPage: "civilizations" }));
 
     expect(markup).toContain("文明演化");
     expect(markup).toContain("文明详情");

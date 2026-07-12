@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import {
   compareUniverseLaws,
   generateUniverse,
@@ -13,7 +13,7 @@ import { allStructuredLaws, fixedSeeds, lawDomainIds, lawsWithoutMetricTargets, 
 
 describe("阶段 2 宇宙法则引擎", () => {
   it("每个宇宙至少生成 12 条结构化法则，并且每类至少 2 条", () => {
-    const universe = generateUniverse({ seed: fixedSeeds[0], templateId: "high_magic" });
+    const universe = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], templateId: "high_magic" });
     const rules = allStructuredLaws(universe);
 
     expect(rules.length).toBeGreaterThanOrEqual(12);
@@ -24,7 +24,7 @@ describe("阶段 2 宇宙法则引擎", () => {
   });
 
   it("每个宇宙至少生成 3 条法则关系，并且关系能追踪到结构化法则", () => {
-    const universe = generateUniverse({ seed: fixedSeeds[1], templateId: "mythic" });
+    const universe = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[1], templateId: "mythic" });
     const ruleIds = new Set(allStructuredLaws(universe).map((rule) => rule.id));
 
     expect(universe.lawInteractions.length).toBeGreaterThanOrEqual(3);
@@ -32,7 +32,7 @@ describe("阶段 2 宇宙法则引擎", () => {
   });
 
   it("每个关键指标至少有 1 条可追踪到法则或关系的影响来源", () => {
-    const universe = generateUniverse({ seed: fixedSeeds[2], templateId: "chaotic_laws" });
+    const universe = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[2], templateId: "chaotic_laws" });
     const traceableSourceIds = new Set([
       ...allStructuredLaws(universe).map((rule) => rule.id),
       ...universe.lawInteractions.map((interaction) => interaction.id),
@@ -63,8 +63,8 @@ describe("阶段 2 宇宙法则引擎", () => {
   });
 
   it("不同模板会明显改变法则结果", () => {
-    const hardScience = generateUniverse({ seed: fixedSeeds[3], templateId: "hard_science" });
-    const highMagic = generateUniverse({ seed: fixedSeeds[3], templateId: "high_magic" });
+    const hardScience = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[3], templateId: "hard_science" });
+    const highMagic = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[3], templateId: "high_magic" });
     const totalDomainDelta = lawDomainIds.reduce((sum, domain) => sum + Math.abs(hardScience.laws[domain].rating.value - highMagic.laws[domain].rating.value), 0);
     const hardScienceSignature = allStructuredLaws(hardScience).map((rule) => `${rule.domain}:${rule.name}:${rule.value}`).join("|");
     const highMagicSignature = allStructuredLaws(highMagic).map((rule) => `${rule.domain}:${rule.name}:${rule.value}`).join("|");

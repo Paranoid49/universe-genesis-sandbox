@@ -80,6 +80,7 @@ docs/               阶段规格与项目文档
 - 新模块应使用稳定的命名随机流。
 - 会影响生成结果的规则、权重、名称池、事件池或解释池变更，必须更新 `rulesetVersion`。
 - 分享码或分享链接必须能恢复 `seed`、`templateId` 和当前 `rulesetVersion`。
+- `GenerateUniverseInput` 必须显式传入 `rulesetVersion`，缺失或不匹配时不得生成。
 - 当前应用只保证同一当前规则版本内复现，非当前规则短码只提示不受支持，不提供旧规则运行时兼容。
 
 ## 数据与内容规则
@@ -108,6 +109,7 @@ docs/               阶段规格与项目文档
 - `src/sim/**` 中没有直接使用 `Math.random()`。
 - 生成规则内容哈希门禁保持通过；如果本次变更会影响生成结果，应同步更新 `RULESET_VERSION`、`RULESET_SHORT_CODE`、相关文档和测试基线。
 - ESLint、架构依赖、覆盖率、组件交互、键盘、无障碍和构建体积门禁保持通过。
+- 发布候选还必须按文档在可见终端手动启动预览服务并运行 `npm run test:e2e`，测试后立即停止服务。
 
 完整门禁与阈值见 [docs/quality-gates.md](docs/quality-gates.md)，非功能要求见 [docs/non-functional-requirements.md](docs/non-functional-requirements.md)。
 

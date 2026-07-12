@@ -16,8 +16,8 @@ export type {
   TargetMutation,
 } from "./contracts/interventions";
 
-export const RULESET_VERSION = "ugs-ruleset@0.6.1";
-export const RULESET_SHORT_CODE = "UGS061";
+export const RULESET_VERSION = "ugs-ruleset@0.6.2";
+export const RULESET_SHORT_CODE = "UGS062";
 
 export type UniverseTemplateId =
   | "hard_science"
@@ -444,6 +444,7 @@ export type UniverseSummary = {
 
 export type GenerateUniverseInput = {
   seed: string;
+  rulesetVersion: string;
   templateId?: UniverseTemplateId;
   interventions?: InterventionInput[];
 };

@@ -1,13 +1,13 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { App } from "../src/App";
-import { generateUniverse } from "../src/sim";
+import { App, type AppProps } from "../src/App";
+import { generateUniverse, RULESET_VERSION } from "../src/sim";
 import { allPlanets, allStructuredLaws, averageGalaxyValue, fixedSeeds, galaxySignature } from "./helpers";
 
 describe("阶段 4 局部对象基础模型", () => {
   it("每个宇宙生成可追踪来源的代表性星系、恒星系和行星", () => {
-    const universe = generateUniverse({ seed: fixedSeeds[0], templateId: "high_magic" });
+    const universe = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], templateId: "high_magic" });
     const eventIds = new Set(universe.timeline.map((event) => event.id));
     const ruleIds = new Set(allStructuredLaws(universe).map((rule) => rule.id));
     const planetIds = new Set<string>();
@@ -43,8 +43,8 @@ describe("阶段 4 局部对象基础模型", () => {
   });
 
   it("局部对象会出现生命样本，并保持同 seed 完全复现", () => {
-    const first = generateUniverse({ seed: fixedSeeds[2], templateId: "high_magic" });
-    const second = generateUniverse({ seed: fixedSeeds[2], templateId: "high_magic" });
+    const first = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[2], templateId: "high_magic" });
+    const second = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[2], templateId: "high_magic" });
     const biosphereCount = first.galaxies
       .flatMap((galaxy) => galaxy.starSystems)
       .flatMap((system) => system.planets)
@@ -55,8 +55,8 @@ describe("阶段 4 局部对象基础模型", () => {
   });
 
   it("不同模板会改变局部对象结构和异常倾向", () => {
-    const hardScience = generateUniverse({ seed: fixedSeeds[3], templateId: "hard_science" });
-    const chaoticLaws = generateUniverse({ seed: fixedSeeds[3], templateId: "chaotic_laws" });
+    const hardScience = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[3], templateId: "hard_science" });
+    const chaoticLaws = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[3], templateId: "chaotic_laws" });
     const hardSignature = galaxySignature(hardScience);
     const chaoticSignature = galaxySignature(chaoticLaws);
     const hardHazard = averageGalaxyValue(hardScience, "causalHazard");
@@ -67,7 +67,7 @@ describe("阶段 4 局部对象基础模型", () => {
   });
 
   it("生命行星为阶段 5 文明开发保留可追踪候选种子", () => {
-    const universe = generateUniverse({ seed: fixedSeeds[0], templateId: "high_magic" });
+    const universe = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], templateId: "high_magic" });
     const eventIds = new Set(universe.timeline.map((event) => event.id));
     const ruleIds = new Set(allStructuredLaws(universe).map((rule) => rule.id));
     const candidates = allPlanets(universe).flatMap((planet) =>
@@ -88,7 +88,7 @@ describe("阶段 4 局部对象基础模型", () => {
   });
 
   it("页面提供从宇宙摘要进入星系、恒星系和行星详情的浏览入口", () => {
-    const markup = renderToStaticMarkup(createElement(App, { initialPage: "space" }));
+    const markup = renderToStaticMarkup(createElement<AppProps>(App, { initialPage: "space" }));
 
     expect(markup).toContain("星系、恒星系与行星");
     expect(markup).toContain("局部探索");

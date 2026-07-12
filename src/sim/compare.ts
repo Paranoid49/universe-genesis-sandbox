@@ -1,5 +1,5 @@
 import { generateUniverse } from "./universe";
-import type { DomainLawDiff, LawComparison, LawDomain, LawDomainId, StructuredLaw, UniverseTemplateId } from "./types";
+import { RULESET_VERSION, type DomainLawDiff, type LawComparison, type LawDomain, type LawDomainId, type StructuredLaw, type UniverseTemplateId } from "./types";
 
 const lawDomainIds: LawDomainId[] = ["physics", "magic", "life", "consciousness", "divinity", "causality"];
 
@@ -13,8 +13,8 @@ const domainNames: Record<LawDomainId, string> = {
 };
 
 export function compareUniverseLaws(leftSeed: string, rightSeed: string, templateId: UniverseTemplateId): LawComparison {
-  const left = generateUniverse({ seed: leftSeed, templateId });
-  const right = generateUniverse({ seed: rightSeed, templateId });
+  const left = generateUniverse({ seed: leftSeed, rulesetVersion: RULESET_VERSION, templateId });
+  const right = generateUniverse({ seed: rightSeed, rulesetVersion: RULESET_VERSION, templateId });
   const domainDiffs = lawDomainIds.map((domain): DomainLawDiff => {
     const leftDomain = left.laws[domain];
     const rightDomain = right.laws[domain];

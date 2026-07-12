@@ -9,14 +9,14 @@ import { createRandomStream, formatSeed, normalizeSeed } from "./random";
 import { createShareCode, createShareText, createShareUrl } from "./share";
 import { getTemplate } from "./templates";
 import { generateTimeline, summarizeTimelineImpact } from "./timeline";
-import { RULESET_SHORT_CODE, RULESET_VERSION, type GenerateUniverseInput, type UniverseSummary } from "./types";
+import { RULESET_SHORT_CODE, type GenerateUniverseInput, type UniverseSummary } from "./types";
 import { assertGenerateUniverseInput } from "./validation";
 
 export function generateUniverse(input: GenerateUniverseInput): UniverseSummary {
   assertGenerateUniverseInput(input);
   const seed = normalizeSeed(input.seed);
   const template = getTemplate(input.templateId);
-  const root = createRandomStream(`${RULESET_VERSION}:${template.id}:${seed}`, "root");
+  const root = createRandomStream(`${input.rulesetVersion}:${template.id}:${seed}`, "root");
   const laws = generateLaws(template, root);
   const lawInteractions = generateLawInteractions(laws, root.fork("laws.interactions"));
   const metrics = generateMetrics(template, laws, lawInteractions, root.fork("metrics"));
@@ -49,7 +49,7 @@ export function generateUniverse(input: GenerateUniverseInput): UniverseSummary 
   const summary: UniverseSummary = {
     seed,
     displaySeed: formatSeed(seed),
-    rulesetVersion: RULESET_VERSION,
+    rulesetVersion: input.rulesetVersion,
     rulesetShortCode: RULESET_SHORT_CODE,
     templateId: template.id,
     templateShortCode: template.shortCode,

@@ -1,4 +1,6 @@
 import { readFileSync, statSync } from "node:fs";
+import { dirname, normalize, relative, resolve, sep } from "node:path";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { listSourceFiles, pathFromTest } from "./helpers";
 
@@ -7,17 +9,43 @@ describe("架构边界门禁", () => {
   const files = listSourceFiles(sourceRoot);
 
   it("模拟核心不依赖 UI、组件、React 或浏览器状态", () => {
-    const offenders = files.filter((file) => file.includes(`${pathSeparator()}sim${pathSeparator()}`)).filter((file) => {
-      const source = readFileSync(file, "utf8");
-      return /from\s+["'][^"']*(?:ui|components)[^"']*["']/.test(source) || /from\s+["']react/.test(source) || /\b(?:window|document|navigator|localStorage)\s*\./.test(source);
+    const offenders = files.filter(isSimFile).filter((file) => {
+      const sourceFile = parseSourceFile(file);
+      const imports = importedModules(sourceFile);
+      const hasForbiddenDependency = imports.some((moduleName) => moduleName === "react" || resolvesInto(file, moduleName, ["ui", "components", "App"]));
+      const hasBrowserState = descendants(sourceFile).some((node) => ts.isPropertyAccessExpression(node)
+        && ts.isIdentifier(node.expression)
+        && ["window", "document", "navigator", "localStorage"].includes(node.expression.text));
+      return hasForbiddenDependency || hasBrowserState;
     });
     expect(offenders).toEqual([]);
   });
 
   it("展示组件不直接调用生成器", () => {
-    const offenders = files.filter((file) => file.includes(`${pathSeparator()}components${pathSeparator()}`)).filter((file) => {
-      const source = readFileSync(file, "utf8");
-      return /\b(?:generateUniverse|generateGalaxies|generateCivilizations|applyInterventions)\s*\(/.test(source);
+    const generatorExports = new Set(["generateUniverse", "generateGalaxies", "generateCivilizations", "applyInterventions"]);
+    const offenders = files.filter((file) => file.includes(`${sep}components${sep}`)).filter((file) => {
+      const sourceFile = parseSourceFile(file);
+      const localGeneratorNames = new Set<string>();
+      sourceFile.statements.filter(ts.isImportDeclaration).forEach((declaration) => {
+        if (!declaration.importClause || !ts.isStringLiteral(declaration.moduleSpecifier)) return;
+        if (!resolvesInto(file, declaration.moduleSpecifier.text, ["sim"])) return;
+        const bindings = declaration.importClause.namedBindings;
+        if (!bindings || !ts.isNamedImports(bindings)) return;
+        bindings.elements.forEach((element) => {
+          const exportedName = element.propertyName?.text ?? element.name.text;
+          if (generatorExports.has(exportedName)) localGeneratorNames.add(element.name.text);
+        });
+      });
+      return descendants(sourceFile).some((node) => ts.isCallExpression(node) && ts.isIdentifier(node.expression) && localGeneratorNames.has(node.expression.text));
+    });
+    expect(offenders).toEqual([]);
+  });
+
+  it("UI 和组件依赖保持向上单向流动", () => {
+    const offenders = files.filter((file) => file.includes(`${sep}ui${sep}`) || file.includes(`${sep}components${sep}`)).filter((file) => {
+      const imports = importedModules(parseSourceFile(file));
+      if (file.includes(`${sep}ui${sep}`)) return imports.some((moduleName) => resolvesInto(file, moduleName, ["components", "App"]));
+      return imports.some((moduleName) => resolvesInto(file, moduleName, ["App"]));
     });
     expect(offenders).toEqual([]);
   });
@@ -42,6 +70,39 @@ describe("架构边界门禁", () => {
   });
 });
 
-function pathSeparator(): string {
-  return process.platform === "win32" ? "\\" : "/";
+function parseSourceFile(file: string): ts.SourceFile {
+  return ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true, file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+}
+
+function importedModules(sourceFile: ts.SourceFile): string[] {
+  return sourceFile.statements.flatMap((statement) => {
+    if ((ts.isImportDeclaration(statement) || ts.isExportDeclaration(statement)) && statement.moduleSpecifier && ts.isStringLiteral(statement.moduleSpecifier)) {
+      return [statement.moduleSpecifier.text];
+    }
+    return [];
+  });
+}
+
+function resolvesInto(file: string, moduleName: string, segments: string[]): boolean {
+  if (!moduleName.startsWith(".")) return false;
+  const target = normalize(relative(sourceRootPath(), resolve(dirname(file), moduleName)));
+  return segments.some((segment) => target === segment || target.startsWith(`${segment}${sep}`) || target.startsWith(`${segment}.`));
+}
+
+function sourceRootPath(): string {
+  return pathFromTest(import.meta.url, "../src");
+}
+
+function isSimFile(file: string): boolean {
+  return file.includes(`${sep}sim${sep}`);
+}
+
+function descendants(root: ts.Node): ts.Node[] {
+  const nodes: ts.Node[] = [];
+  const visit = (node: ts.Node) => {
+    nodes.push(node);
+    node.forEachChild(visit);
+  };
+  root.forEachChild(visit);
+  return nodes;
 }

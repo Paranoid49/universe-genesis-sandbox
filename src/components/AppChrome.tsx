@@ -16,6 +16,7 @@ export function UniverseToolbar({
   draftSeed,
   templateId,
   copyState,
+  inputError,
   onDraftSeedChange,
   onTemplateChange,
   onCreate,
@@ -25,6 +26,7 @@ export function UniverseToolbar({
   draftSeed: string;
   templateId: UniverseTemplateId;
   copyState: string;
+  inputError?: string;
   onDraftSeedChange: (value: string) => void;
   onTemplateChange: (value: UniverseTemplateId) => void;
   onCreate: () => void;
@@ -43,7 +45,7 @@ export function UniverseToolbar({
       <div className="tool-strip">
         <label className="seed-field">
           <span>Seed</span>
-          <input value={draftSeed} onChange={(event) => onDraftSeedChange(event.target.value)} />
+          <input aria-invalid={Boolean(inputError)} aria-describedby={inputError ? "seed-input-error" : undefined} value={draftSeed} onChange={(event) => onDraftSeedChange(event.target.value)} />
         </label>
         <label className="template-field">
           <span>模板</span>
@@ -60,6 +62,7 @@ export function UniverseToolbar({
         <button className="icon-action" type="button" onClick={onCopy} title="复制分享文本和链接">
           <Clipboard size={17} />{copyState}
         </button>
+        {inputError && <p className="input-error" id="seed-input-error" role="alert">{inputError}</p>}
       </div>
     </section>
   );

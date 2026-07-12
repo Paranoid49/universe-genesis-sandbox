@@ -63,21 +63,19 @@ function mutatePlanet(
         matched = true;
         if (definition.type === "seed_life") {
           const nextBiosphere = seededBiosphere(planet.biosphere, planet, miracleId, rng);
-          mutations.push(mutation(planet.id, "planet", "biosphere.level", planet.biosphere?.level ?? null, nextBiosphere.level, "生命火种在目标行星形成了可持续生物圈。"));
-          mutations.push(mutation(planet.id, "planet", "habitability", planet.habitability, clampValue(planet.habitability + 8), "生命火种改善了目标行星的宜居条件。"));
-          return {
+          const nextPlanet = {
             ...planet,
             habitability: clampValue(planet.habitability + 8),
             stability: clampValue(planet.stability + 3),
             biosphere: nextBiosphere,
           };
+          mutations.push(...diffTargetMutations(planet.id, "planet", planet, nextPlanet, definition.title));
+          return nextPlanet;
         }
 
         const nextHabitability = clampValue(planet.habitability + 10);
         const nextStability = clampValue(planet.stability + 8);
-        mutations.push(mutation(planet.id, "planet", "habitability", planet.habitability, nextHabitability, "祝福提高了目标行星的宜居度。"));
-        mutations.push(mutation(planet.id, "planet", "stability", planet.stability, nextStability, "祝福提高了目标行星的局部稳定度。"));
-        return {
+        const nextPlanet = {
           ...planet,
           habitability: nextHabitability,
           stability: nextStability,
@@ -89,6 +87,8 @@ function mutatePlanet(
               }
             : planet.biosphere,
         };
+        mutations.push(...diffTargetMutations(planet.id, "planet", planet, nextPlanet, definition.title));
+        return nextPlanet;
       }),
     })),
   }));
@@ -113,9 +113,7 @@ function mutateStarSystem(
       matched = true;
       const nextStability = clampValue(system.stability + 14);
       const nextAnomalyLevel = clampValue(system.anomalyLevel - 12);
-      mutations.push(mutation(system.id, "star_system", "stability", system.stability, nextStability, "恒星稳定术提高了目标恒星系的稳定度。"));
-      mutations.push(mutation(system.id, "star_system", "anomalyLevel", system.anomalyLevel, nextAnomalyLevel, "恒星稳定术压低了目标恒星系的异常水平。"));
-      return {
+      const nextSystem = {
         ...system,
         stability: nextStability,
         anomalyLevel: nextAnomalyLevel,
@@ -124,6 +122,11 @@ function mutateStarSystem(
           stability: clampValue(planet.stability + 5),
         })),
       };
+      mutations.push(...diffTargetMutations(system.id, "star_system", omitPlanets(system), omitPlanets(nextSystem), definition.title));
+      system.planets.forEach((planet, index) => {
+        mutations.push(...diffTargetMutations(planet.id, "planet", planet, nextSystem.planets[index], definition.title));
+      });
+      return nextSystem;
     }),
   }));
 
@@ -147,9 +150,7 @@ function mutateCivilization(
     if (definition.type === "grant_magic") {
       const nextMagicLevel = clampValue(civilization.magicLevel + 18);
       const nextFaithIntensity = clampValue(civilization.faithIntensity + 6);
-      mutations.push(mutation(civilization.id, "civilization", "magicLevel", civilization.magicLevel, nextMagicLevel, "魔法通道提高了目标文明的魔法水平。"));
-      mutations.push(mutation(civilization.id, "civilization", "faithIntensity", civilization.faithIntensity, nextFaithIntensity, "可见神迹提高了目标文明的信仰强度。"));
-      return {
+      const nextCivilization = {
         ...civilization,
         magicLevel: nextMagicLevel,
         faithIntensity: nextFaithIntensity,
@@ -158,38 +159,39 @@ function mutateCivilization(
           influenceLevel: clampValue(civilization.mythology.influenceLevel + 10),
         },
       };
+      mutations.push(...diffTargetMutations(civilization.id, "civilization", civilization, nextCivilization, definition.title));
+      return nextCivilization;
     }
 
     if (definition.type === "send_catastrophe") {
       const nextStability = clampValue(civilization.stability - 20);
       const nextExtinctionRisk = clampValue(civilization.extinctionRisk + 24);
-      mutations.push(mutation(civilization.id, "civilization", "stability", civilization.stability, nextStability, "灾难削弱了目标文明的稳定度。"));
-      mutations.push(mutation(civilization.id, "civilization", "extinctionRisk", civilization.extinctionRisk, nextExtinctionRisk, "灾难提高了目标文明的灭绝风险。"));
-      return {
+      const nextCivilization = {
         ...civilization,
         stability: nextStability,
         extinctionRisk: nextExtinctionRisk,
         fate: nextExtinctionRisk >= 75 ? "collapse" : civilization.fate,
       };
+      mutations.push(...diffTargetMutations(civilization.id, "civilization", civilization, nextCivilization, definition.title));
+      return nextCivilization;
     }
 
     if (definition.type === "revive_civilization") {
       const nextStability = clampValue(Math.max(civilization.stability, 58));
       const nextExtinctionRisk = clampValue(Math.min(civilization.extinctionRisk, 28));
-      mutations.push(mutation(civilization.id, "civilization", "stability", civilization.stability, nextStability, "记忆火种恢复了目标文明的延续能力。"));
-      mutations.push(mutation(civilization.id, "civilization", "extinctionRisk", civilization.extinctionRisk, nextExtinctionRisk, "复活干预降低了目标文明的灭绝风险。"));
-      return {
+      const nextCivilization = {
         ...civilization,
         stability: nextStability,
         extinctionRisk: nextExtinctionRisk,
         fate: civilization.fate === "collapse" ? "unknown" : civilization.fate,
         path: civilization.path === "lost" ? "city_state" : civilization.path,
       };
+      mutations.push(...diffTargetMutations(civilization.id, "civilization", civilization, nextCivilization, definition.title));
+      return nextCivilization;
     }
 
     const nextInfluence = clampValue(civilization.mythology.influenceLevel - 22);
-    mutations.push(mutation(civilization.id, "mythology", "mythology.influenceLevel", civilization.mythology.influenceLevel, nextInfluence, "神明封印降低了目标神话系统的影响力。"));
-    return {
+    const nextCivilization = {
       ...civilization,
       faithIntensity: clampValue(civilization.faithIntensity - 8),
       mythology: {
@@ -198,6 +200,8 @@ function mutateCivilization(
         relationToCivilization: `封印状态：${civilization.mythology.relationToCivilization}`,
       },
     };
+    mutations.push(...diffTargetMutations(civilization.id, "mythology", civilization, nextCivilization, definition.title));
+    return nextCivilization;
   });
 
   ensureMatched(matched, input, definition);
@@ -233,15 +237,51 @@ function seededBiosphere(
   };
 }
 
-function mutation(
+function diffTargetMutations(
   targetId: string,
   targetKind: TargetMutation["targetKind"],
-  field: string,
-  before: TargetMutation["before"],
-  after: TargetMutation["after"],
-  explanation: string,
-): TargetMutation {
-  return { targetId, targetKind, field, before, after, explanation };
+  before: unknown,
+  after: unknown,
+  miracleTitle: string,
+  field = "",
+): TargetMutation[] {
+  if (Object.is(before, after)) return [];
+  if (isRecord(after) || isRecord(before)) {
+    const beforeRecord = isRecord(before) ? before : {};
+    const afterRecord = isRecord(after) ? after : {};
+    const keys = new Set([...Object.keys(beforeRecord), ...Object.keys(afterRecord)]);
+    return [...keys].flatMap((key) => diffTargetMutations(
+      targetId,
+      targetKind,
+      beforeRecord[key],
+      afterRecord[key],
+      miracleTitle,
+      field ? `${field}.${key}` : key,
+    ));
+  }
+  return [{
+    targetId,
+    targetKind,
+    field,
+    before: auditValue(before),
+    after: auditValue(after),
+    explanation: `奇迹“${miracleTitle}”修改了目标字段 ${field}。`,
+  }];
+}
+
+function omitPlanets(system: Galaxy["starSystems"][number]) {
+  const { planets: _planets, ...summary } = system;
+  return summary;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function auditValue(value: unknown): TargetMutation["before"] {
+  if (value === undefined || value === null) return null;
+  if (typeof value === "number" || typeof value === "string") return value;
+  return JSON.stringify(value);
 }
 
 function ensureMatched(matched: boolean, input: InterventionInput, definition: MiracleDefinition): void {

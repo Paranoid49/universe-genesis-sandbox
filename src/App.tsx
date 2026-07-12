@@ -9,11 +9,12 @@ import { eraName, eventTypeName, interactionKindName, lawDomainName, metricName,
 import { topInfluences } from "./ui/selectors";
 import { eraFilterOptions, useUniverseAppModel, type AppPageId } from "./ui/useUniverseAppModel";
 
-type AppProps = {
+export type AppProps = {
   initialPage?: AppPageId;
+  search?: string;
 };
 
-export function App({ initialPage = "overview" }: AppProps = {}) {
+export function App({ initialPage = "overview", search }: AppProps = {}) {
   const {
     activePage,
     applySelectedMiracle,
@@ -27,6 +28,7 @@ export function App({ initialPage = "overview" }: AppProps = {}) {
     draftSeed,
     eraFilter,
     filteredTimeline,
+    compareInputError,
     randomizeSeed,
     selectedCivilization,
     selectedEvent,
@@ -35,6 +37,7 @@ export function App({ initialPage = "overview" }: AppProps = {}) {
     selectedMiracleType,
     selectedPlanet,
     selectedSystem,
+    seedInputError,
     setActivePage,
     setCompareDraftSeed,
     setDraftSeed,
@@ -54,7 +57,7 @@ export function App({ initialPage = "overview" }: AppProps = {}) {
     selectGalaxy,
     selectPlanet,
     selectSystem,
-  } = useUniverseAppModel({ initialPage });
+  } = useUniverseAppModel({ initialPage, search });
 
   return (
     <main className="app-shell">
@@ -62,6 +65,7 @@ export function App({ initialPage = "overview" }: AppProps = {}) {
         draftSeed={draftSeed}
         templateId={templateId}
         copyState={copyState}
+        inputError={seedInputError}
         onDraftSeedChange={setDraftSeed}
         onTemplateChange={setTemplateId}
         onCreate={createUniverse}
@@ -295,12 +299,13 @@ export function App({ initialPage = "overview" }: AppProps = {}) {
             <div className="compare-controls">
               <label>
                 <span>对比 Seed</span>
-                <input value={compareDraftSeed} onChange={(event) => setCompareDraftSeed(event.target.value)} />
+                <input aria-invalid={Boolean(compareInputError)} aria-describedby={compareInputError ? "compare-seed-error" : undefined} value={compareDraftSeed} onChange={(event) => setCompareDraftSeed(event.target.value)} />
               </label>
               <button type="button" onClick={compareSeedNow}>
                 对比
               </button>
             </div>
+            {compareInputError && <p className="input-error" id="compare-seed-error" role="alert">{compareInputError}</p>}
             <div className="comparison-grid">
               {comparison.domainDiffs.map((diff) => (
                 <article key={diff.domain}>

@@ -7,6 +7,8 @@ build/
 .next/
 out/
 coverage/
+playwright-report/
+test-results/
 .vite/
 .turbo/
 .cache/

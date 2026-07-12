@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { App } from "../src/App";
+import { App, type AppProps } from "../src/App";
 import {
   generateUniverse,
   decodeShareCode,
@@ -32,9 +32,9 @@ describe("阶段 6 造物主干预与奇迹系统", () => {
   });
 
   it("每次奇迹都会生成干预日志、结果事件，并改变至少一个指标或事件概率", () => {
-    const base = generateUniverse({ seed: fixedSeeds[0], templateId: "high_magic" });
+    const base = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], templateId: "high_magic" });
     const interventions = sampleInterventions(base);
-    const intervened = generateUniverse({ seed: fixedSeeds[0], templateId: "high_magic", interventions });
+    const intervened = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], templateId: "high_magic", interventions });
     const eventIds = new Set(intervened.timeline.map((event) => event.id));
 
     expect(intervened.rulesetVersion).toBe(RULESET_VERSION);
@@ -61,16 +61,16 @@ describe("阶段 6 造物主干预与奇迹系统", () => {
   });
 
   it("同一 seed、模板、规则版本和干预日志会完全复现干预后宇宙", () => {
-    const base = generateUniverse({ seed: fixedSeeds[1], templateId: "mythic" });
+    const base = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[1], templateId: "mythic" });
     const interventions = sampleInterventions(base);
-    const first = generateUniverse({ seed: fixedSeeds[1], templateId: "mythic", interventions });
-    const second = generateUniverse({ seed: fixedSeeds[1], templateId: "mythic", interventions });
+    const first = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[1], templateId: "mythic", interventions });
+    const second = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[1], templateId: "mythic", interventions });
 
     expect(second).toEqual(first);
   });
 
   it("奇迹会真实修改目标领域对象，而不是只追加描述日志", () => {
-    const base = generateUniverse({ seed: fixedSeeds[0], templateId: "high_magic" });
+    const base = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], templateId: "high_magic" });
     const planet = allPlanets(base)[0];
     const system = base.galaxies.flatMap((galaxy) => galaxy.starSystems).find((entry) => entry.planets.some((entryPlanet) => entryPlanet.id === planet.id));
     const civilization = base.civilizations[0];
@@ -82,7 +82,7 @@ describe("阶段 6 造物主干预与奇迹系统", () => {
       { id: "domain-star", miracleType: "stabilize_star", targetId: system!.id },
       { id: "domain-civilization", miracleType: "grant_magic", targetId: civilization.id },
     ];
-    const universe = generateUniverse({ seed: fixedSeeds[0], templateId: "high_magic", interventions });
+    const universe = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], templateId: "high_magic", interventions });
     const changedPlanet = allPlanets(universe).find((entry) => entry.id === planet.id);
     const changedSystem = universe.galaxies.flatMap((galaxy) => galaxy.starSystems).find((entry) => entry.id === system!.id);
     const changedCivilization = universe.civilizations.find((entry) => entry.id === civilization.id);
@@ -94,9 +94,9 @@ describe("阶段 6 造物主干预与奇迹系统", () => {
   });
 
   it("注入生命会在目标行星形成或强化真实生物圈", () => {
-    const base = generateUniverse({ seed: fixedSeeds[3], templateId: "hard_science" });
+    const base = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[3], templateId: "hard_science" });
     const target = allPlanets(base).find((planet) => !planet.biosphere) ?? allPlanets(base)[0];
-    const universe = generateUniverse({
+    const universe = generateUniverse({ rulesetVersion: RULESET_VERSION,
       seed: fixedSeeds[3],
       templateId: "hard_science",
       interventions: [{ id: "seed-real-life", miracleType: "seed_life", targetId: target.id }],
@@ -107,10 +107,34 @@ describe("阶段 6 造物主干预与奇迹系统", () => {
     expect(changedTarget!.habitability).toBeGreaterThan(target.habitability);
   });
 
+  it("TargetMutation 会覆盖奇迹造成的全部直接字段变化", () => {
+    const base = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], templateId: "high_magic" });
+    const planet = allPlanets(base).find((entry) => entry.biosphere) ?? allPlanets(base)[0];
+    const system = base.galaxies.flatMap((galaxy) => galaxy.starSystems).find((entry) => entry.planets.some((entryPlanet) => entryPlanet.id === planet.id))!;
+    const civilization = base.civilizations.find((entry) => entry.mythology.type !== "none") ?? base.civilizations[0];
+    const universe = generateUniverse({
+      rulesetVersion: RULESET_VERSION,
+      seed: fixedSeeds[0],
+      templateId: "high_magic",
+      interventions: [
+        { id: "audit-planet", miracleType: "bless_planet", targetId: planet.id },
+        { id: "audit-star", miracleType: "stabilize_star", targetId: system.id },
+        { id: "audit-magic", miracleType: "grant_magic", targetId: civilization.id },
+        { id: "audit-seal", miracleType: "seal_deity", targetId: civilization.id },
+      ],
+    });
+    const [planetMiracle, starMiracle, magicMiracle, sealMiracle] = universe.miracleState.appliedMiracles;
+
+    expect(planetMiracle.targetMutations.map((entry) => entry.field)).toEqual(expect.arrayContaining(["habitability", "stability", "biosphere.civilizationChance"]));
+    expect(starMiracle.targetMutations.some((entry) => entry.targetKind === "planet" && entry.field === "stability")).toBe(true);
+    expect(magicMiracle.targetMutations.map((entry) => entry.field)).toEqual(expect.arrayContaining(["magicLevel", "faithIntensity", "mythology.influenceLevel"]));
+    expect(sealMiracle.targetMutations.map((entry) => entry.field)).toEqual(expect.arrayContaining(["faithIntensity", "mythology.influenceLevel", "mythology.relationToCivilization"]));
+  });
+
   it("分享码和分享链接会完整恢复干预分支", () => {
-    const base = generateUniverse({ seed: fixedSeeds[1], templateId: "mythic" });
+    const base = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[1], templateId: "mythic" });
     const interventions = sampleInterventions(base).slice(0, 3);
-    const universe = generateUniverse({ seed: fixedSeeds[1], templateId: "mythic", interventions });
+    const universe = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[1], templateId: "mythic", interventions });
 
     expect(decodeShareCode(universe.shareCode)?.interventions).toEqual(interventions);
     expect(decodeShareParams(universe.shareUrl)?.interventions).toEqual(interventions);
@@ -119,23 +143,23 @@ describe("阶段 6 造物主干预与奇迹系统", () => {
   });
 
   it("无效奇迹类型、重复 ID 和目标类型不匹配会被明确拒绝", () => {
-    expect(() => generateUniverse({ seed: fixedSeeds[0], interventions: [{ id: "bad", miracleType: "unknown" as MiracleType, targetId: "x" }] })).toThrowError(UniverseInputError);
-    expect(() => generateUniverse({ seed: fixedSeeds[0], interventions: [
+    expect(() => generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], interventions: [{ id: "bad", miracleType: "unknown" as MiracleType, targetId: "x" }] })).toThrowError(UniverseInputError);
+    expect(() => generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], interventions: [
       { id: "duplicate", miracleType: "repair_causality", targetId: `universe.${fixedSeeds[0]}` },
       { id: "duplicate", miracleType: "repair_causality", targetId: `universe.${fixedSeeds[0]}` },
     ] })).toThrowError(/重复/);
-    expect(() => generateUniverse({ seed: fixedSeeds[0], interventions: [{ id: "wrong-target", miracleType: "bless_planet", targetId: "civ-01" }] })).toThrowError(/找不到/);
-    expect(() => generateUniverse({ seed: fixedSeeds[0], interventions: [{ id: "wrong-universe", miracleType: "repair_causality", targetId: "universe.wrong" }] })).toThrowError(/宇宙级奇迹目标/);
+    expect(() => generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], interventions: [{ id: "wrong-target", miracleType: "bless_planet", targetId: "civ-01" }] })).toThrowError(/找不到/);
+    expect(() => generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], interventions: [{ id: "wrong-universe", miracleType: "repair_causality", targetId: "universe.wrong" }] })).toThrowError(/宇宙级奇迹目标/);
   });
 
   it("奇迹过度使用会触发负面反噬事件", () => {
-    const base = generateUniverse({ seed: fixedSeeds[2], templateId: "chaotic_laws" });
+    const base = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[2], templateId: "chaotic_laws" });
     const seedInterventions = sampleInterventions(base);
     const interventions = [...seedInterventions, ...seedInterventions].map((entry, index) => ({
       ...entry,
       id: `overuse-${String(index + 1).padStart(2, "0")}`,
     }));
-    const universe = generateUniverse({ seed: fixedSeeds[2], templateId: "chaotic_laws", interventions });
+    const universe = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[2], templateId: "chaotic_laws", interventions });
 
     expect(universe.miracleState.overuseLevel).toBe("backlash");
     expect(universe.miracleState.backlashEvents.length).toBeGreaterThan(0);
@@ -144,7 +168,7 @@ describe("阶段 6 造物主干预与奇迹系统", () => {
   });
 
   it("页面静态渲染包含阶段 6 干预入口", () => {
-    const markup = renderToStaticMarkup(createElement(App, { initialPage: "miracles" }));
+    const markup = renderToStaticMarkup(createElement<AppProps>(App, { initialPage: "miracles" }));
 
     expect(markup).toContain("造物主干预");
     expect(markup).toContain("奇迹点");

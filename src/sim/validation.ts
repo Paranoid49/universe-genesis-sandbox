@@ -2,6 +2,7 @@ import { miracleDefinitions } from "./content/miracles";
 import { UniverseInputError } from "./errors";
 import { UNIVERSE_TEMPLATES } from "./templates";
 import type { GenerateUniverseInput, InterventionInput, MiracleType, UniverseTemplateId } from "./types";
+import { RULESET_VERSION } from "./types";
 
 const interventionIdPattern = /^[A-Za-z0-9._-]{1,64}$/;
 const templateIds = new Set<string>(UNIVERSE_TEMPLATES.map((template) => template.id));
@@ -15,6 +16,14 @@ export function assertGenerateUniverseInput(input: unknown): asserts input is Ge
   const candidate = input as Record<string, unknown>;
   if (typeof candidate.seed !== "string" || candidate.seed.trim().length === 0 || candidate.seed.length > 128) {
     throw new UniverseInputError("INVALID_SEED", "seed", "Seed 必须是长度为 1 至 128 的非空字符串。");
+  }
+
+  if (typeof candidate.rulesetVersion !== "string" || candidate.rulesetVersion !== RULESET_VERSION) {
+    throw new UniverseInputError(
+      "UNSUPPORTED_RULESET",
+      "rulesetVersion",
+      `规则版本 ${String(candidate.rulesetVersion)} 不受支持，当前版本为 ${RULESET_VERSION}。`,
+    );
   }
 
   if (candidate.templateId !== undefined && (typeof candidate.templateId !== "string" || !templateIds.has(candidate.templateId))) {

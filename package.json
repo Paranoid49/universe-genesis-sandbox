@@ -10,11 +10,16 @@
     "test": "npm run test:unit && npm run test:ui",
     "test:unit": "vitest run",
     "test:ui": "vitest run --config vitest.ui.config.ts",
-    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:coverage": "npm run test:coverage:sim && npm run test:coverage:ui",
+    "test:coverage:sim": "vitest run --coverage",
+    "test:coverage:ui": "vitest run --config vitest.ui.config.ts --coverage",
     "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "lint": "eslint .",
     "check:bundle": "node scripts/check-build-budget.mjs",
-    "check": "npm run lint && npm run test:coverage && npm run test:ui && npm run build && npm run check:bundle"
+    "check:release": "npm run check && npm run test:e2e",
+    "check": "npm run lint && npm run typecheck && npm run test:coverage && npm run test:ui && npm run build && npm run check:bundle"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",
@@ -22,9 +27,12 @@
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.61.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
+    "@types/jest-axe": "^3.5.9",
     "@types/node": "^26.1.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",

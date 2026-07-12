@@ -1,11 +1,14 @@
 import { useMemo, useState } from "react";
 import {
   compareUniverseLaws,
+  assertGenerateUniverseInput,
   filterTimelineByEra,
   formatSeed,
   generateUniverse,
   miracleDefinitions,
   normalizeSeed,
+  RULESET_VERSION,
+  UniverseInputError,
   type Civilization,
   type EraId,
   type Galaxy,
@@ -66,8 +69,10 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
   const [interventionInputs, setInterventionInputs] = useState<InterventionInput[]>(initialShare?.interventions ?? []);
   const [selectedMiracleType, setSelectedMiracleType] = useState<MiracleType>(miracleDefinitions[0].type);
   const [selectedMiracleTargetId, setSelectedMiracleTargetId] = useState<string | undefined>();
+  const [seedInputError, setSeedInputError] = useState<string | undefined>();
+  const [compareInputError, setCompareInputError] = useState<string | undefined>();
 
-  const universe = useMemo(() => generateUniverse({ seed: activeSeed, templateId, interventions: interventionInputs }), [activeSeed, templateId, interventionInputs]);
+  const universe = useMemo(() => generateUniverse({ seed: activeSeed, rulesetVersion: RULESET_VERSION, templateId, interventions: interventionInputs }), [activeSeed, templateId, interventionInputs]);
   const filteredTimeline = useMemo(() => filterTimelineByEra(universe.timeline, eraFilter), [universe.timeline, eraFilter]);
   const selectedEvent = filteredTimeline.find((event) => event.id === selectedEventId) ?? filteredTimeline[0] ?? firstItem(universe.timeline, "时间线事件");
   const comparison = useMemo(
@@ -88,6 +93,13 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
   const { copyShare, copyState } = useShareController(universe);
 
   function createUniverse() {
+    try {
+      assertGenerateUniverseInput({ seed: draftSeed, rulesetVersion: RULESET_VERSION, templateId });
+    } catch (error) {
+      setSeedInputError(inputErrorMessage(error));
+      return;
+    }
+    setSeedInputError(undefined);
     setActiveSeed(normalizeSeed(draftSeed));
     setInterventionInputs([]);
   }
@@ -95,11 +107,19 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
   function randomizeSeed() {
     const nextSeed = createClientSeed();
     setDraftSeed(formatSeed(nextSeed));
+    setSeedInputError(undefined);
     setActiveSeed(nextSeed);
     setInterventionInputs([]);
   }
 
   function compareSeedNow() {
+    try {
+      assertGenerateUniverseInput({ seed: compareDraftSeed, rulesetVersion: RULESET_VERSION, templateId });
+    } catch (error) {
+      setCompareInputError(`对比 Seed 无效：${inputErrorMessage(error)}`);
+      return;
+    }
+    setCompareInputError(undefined);
     setCompareSeed(normalizeSeed(compareDraftSeed));
   }
 
@@ -126,6 +146,8 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
 
   function changeTemplateId(nextTemplateId: UniverseTemplateId) {
     setTemplateId(nextTemplateId);
+    setSeedInputError(undefined);
+    setCompareInputError(undefined);
     setInterventionInputs([]);
   }
 
@@ -148,6 +170,16 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
     setInterventionInputs([]);
   }
 
+  function changeDraftSeed(value: string) {
+    setDraftSeed(value);
+    if (seedInputError) setSeedInputError(undefined);
+  }
+
+  function changeCompareDraftSeed(value: string) {
+    setCompareDraftSeed(value);
+    if (compareInputError) setCompareInputError(undefined);
+  }
+
   return {
     activePage,
     applySelectedMiracle,
@@ -161,6 +193,7 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
     draftSeed,
     eraFilter,
     filteredTimeline,
+    compareInputError,
     miracleTargetOptions,
     randomizeSeed,
     selectedCivilization,
@@ -170,9 +203,10 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
     selectedMiracleType,
     selectedPlanet,
     selectedSystem,
+    seedInputError,
     setActivePage,
-    setCompareDraftSeed,
-    setDraftSeed,
+    setCompareDraftSeed: changeCompareDraftSeed,
+    setDraftSeed: changeDraftSeed,
     setEraFilter,
     setSelectedMiracleTargetId,
     setSelectedMiracleType,
@@ -189,6 +223,10 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
     selectPlanet,
     selectSystem,
   };
+}
+
+function inputErrorMessage(error: unknown): string {
+  return error instanceof UniverseInputError ? error.message : "输入无法用于生成宇宙。";
 }
 
 function firstItem<T>(items: readonly T[], label: string): T {

@@ -49,7 +49,7 @@ seed + templateId + rulesetVersion
 
 ## 3. 确定性约束
 
-- 所有影响生成结果的输入必须显式进入 `seed + templateId + rulesetVersion` 或后续阶段定义的显式输入边界。
+- 所有影响生成结果的输入必须显式进入 `seed + templateId + rulesetVersion` 或后续阶段定义的显式输入边界，`GenerateUniverseInput.rulesetVersion` 为必填字段且必须与当前运行时匹配。
 - `src/sim/**` 不得直接使用 `Math.random()`、系统时间、浏览器状态或网络状态。
 - 新生成模块必须使用 `RandomStream.fork("稳定命名空间")` 创建局部随机流。
 - 生成规则、权重、素材池或字段语义变化时，必须同步评估 `RULESET_VERSION`、`RULESET_SHORT_CODE`、测试基线和阶段文档。
@@ -115,7 +115,7 @@ tests/ui/*.test.tsx    浏览器交互、键盘和无障碍验收
 - `bless_planet` 和 `seed_life` 修改目标行星及生物圈。
 - `stabilize_star` 修改目标恒星系及所属行星的局部稳定度。
 - 文明类奇迹修改目标文明或神话系统，不重新编号阶段 5 已有对象。
-- 每项字段变化记录为 `TargetMutation`，同时保留稳定奇迹事件和干预日志。
+- 每项字段变化通过对象前后状态递归比较自动记录为 `TargetMutation`，包括对子行星、神话、命运和路径的附带修改，同时保留稳定奇迹事件和干预日志。
 - 概率变化表示干预后的未来倾向，不反向重写阶段 0 至阶段 5 的历史事件。
 
 ## 8. 质量和非功能边界

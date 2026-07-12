@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   decodeShareCode,
@@ -19,23 +19,23 @@ import {
 
 describe("阶段 1 宇宙生成", () => {
   it("同一 seed、模板和规则版本会生成完全一致的宇宙", () => {
-    const first = generateUniverse({ seed: fixedSeeds[0], templateId: "high_magic" });
-    const second = generateUniverse({ seed: fixedSeeds[0], templateId: "high_magic" });
+    const first = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], templateId: "high_magic" });
+    const second = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], templateId: "high_magic" });
 
     expect(first.rulesetVersion).toBe(RULESET_VERSION);
     expect(second).toEqual(first);
   });
 
   it("不同 seed 会产生可感知差异", () => {
-    const first = generateUniverse({ seed: fixedSeeds[0], templateId: "high_magic" });
-    const second = generateUniverse({ seed: fixedSeeds[1], templateId: "high_magic" });
+    const first = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], templateId: "high_magic" });
+    const second = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[1], templateId: "high_magic" });
 
     expect(second.name === first.name && second.tagline === first.tagline && second.timeline[0].title === first.timeline[0].title).toBe(false);
   });
 
   it("10 个模板都能生成非空宇宙", () => {
     for (const template of UNIVERSE_TEMPLATES) {
-      const universe = generateUniverse({ seed: fixedSeeds[2], templateId: template.id });
+      const universe = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[2], templateId: template.id });
 
       expectCompleteUniverse(universe);
       expect(universe.templateId).toBe(template.id);
@@ -44,7 +44,7 @@ describe("阶段 1 宇宙生成", () => {
   });
 
   it("分享码和链接参数能恢复复现信息", () => {
-    const universe = generateUniverse({ seed: fixedSeeds[3], templateId: "mechanical_divinity" });
+    const universe = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[3], templateId: "mechanical_divinity" });
 
     expect(universe.rulesetShortCode).toBe(RULESET_SHORT_CODE);
     expect(universe.shareCode.startsWith(`${RULESET_SHORT_CODE}-`)).toBe(true);
@@ -75,14 +75,19 @@ describe("阶段 1 宇宙生成", () => {
   });
 
   it("损坏的干预分享载荷会被忽略并给出提示", () => {
-    const decoded = decodeShareParams("?s=LUX7F3A91C2&t=HM&v=UGS061&iv=1&i=broken");
+    const decoded = decodeShareParams("?s=LUX7F3A91C2&t=HM&v=UGS062&iv=1&i=broken");
     expect(decoded?.interventions).toEqual([]);
     expect(decoded?.warnings.some((warning) => warning.includes("干预分享数据损坏"))).toBe(true);
   });
 
   it("空 Seed 和未知模板会被运行时边界拒绝", () => {
-    expect(() => generateUniverse({ seed: "" })).toThrowError(/Seed/);
-    expect(() => generateUniverse({ seed: "VALID", templateId: "unknown" as never })).toThrowError(/未知宇宙模板/);
+    expect(() => generateUniverse({ rulesetVersion: RULESET_VERSION, seed: "" })).toThrowError(/Seed/);
+    expect(() => generateUniverse({ rulesetVersion: RULESET_VERSION, seed: "VALID", templateId: "unknown" as never })).toThrowError(/未知宇宙模板/);
+  });
+
+  it("缺失或不匹配的规则版本会被运行时边界拒绝", () => {
+    expect(() => generateUniverse({ seed: "VALID" } as never)).toThrowError(/规则版本/);
+    expect(() => generateUniverse({ seed: "VALID", rulesetVersion: "ugs-ruleset@0.5.0" })).toThrowError(/不受支持/);
   });
 
   it("非当前规则短码不做兼容解析，只按当前规则提示处理", () => {
@@ -99,11 +104,11 @@ describe("阶段 1 宇宙生成", () => {
     const start = performance.now();
     for (let index = 0; index < 50; index += 1) {
       const template = UNIVERSE_TEMPLATES[index % UNIVERSE_TEMPLATES.length];
-      const universe = generateUniverse({ seed: `SMOKE-${String(index).padStart(2, "0")}-UGS`, templateId: template.id });
+      const universe = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: `SMOKE-${String(index).padStart(2, "0")}-UGS`, templateId: template.id });
       expectCompleteUniverse(universe);
     }
     const elapsed = performance.now() - start;
-    const performanceBudget = process.env.npm_lifecycle_event === "test:coverage" ? 5000 : 2000;
+    const performanceBudget = process.env.npm_lifecycle_event?.startsWith("test:coverage") ? 5000 : 2000;
     expect(elapsed).toBeLessThan(performanceBudget);
   });
 
