@@ -2,6 +2,7 @@ import { BarChart3, BookOpen, Clipboard, Dices, History, Link, ListFilter, Refre
 import { RULESET_VERSION, UNIVERSE_TEMPLATES, type UniverseTemplateId } from "./sim";
 import { LogColumn, SectionHeader } from "./components/common";
 import { CivilizationPanel } from "./components/CivilizationPanel";
+import { MiraclePanel } from "./components/MiraclePanel";
 import { SpaceExplorer } from "./components/SpaceExplorer";
 import { EventDetail, TimelineImpactPanel } from "./components/TimelinePanels";
 import { eraName, eventTypeName, interactionKindName, lawDomainName, metricName, polarityName, signed } from "./ui/labels";
@@ -12,6 +13,7 @@ const appPageOptions: Array<{ id: AppPageId; label: string; description: string;
   { id: "overview", label: "概览", description: "宇宙摘要与指标", icon: BarChart3 },
   { id: "space", label: "星系", description: "星系、恒星系与行星", icon: Telescope },
   { id: "civilizations", label: "文明", description: "文明演化与神话", icon: UsersRound },
+  { id: "miracles", label: "干预", description: "造物主干预与奇迹", icon: Sparkles },
   { id: "timeline", label: "纪元", description: "时间线与阶段影响", icon: History },
   { id: "laws", label: "法则", description: "法则、关系与对比", icon: BookOpen },
   { id: "logs", label: "日志", description: "观察记录与终局", icon: ScrollText },
@@ -24,7 +26,9 @@ type AppProps = {
 export function App({ initialPage = "overview" }: AppProps = {}) {
   const {
     activePage,
+    applySelectedMiracle,
     civilizationStats,
+    clearInterventions,
     compareDraftSeed,
     comparison,
     copyShare,
@@ -37,18 +41,23 @@ export function App({ initialPage = "overview" }: AppProps = {}) {
     selectedCivilization,
     selectedEvent,
     selectedGalaxy,
+    selectedMiracleTargetId,
+    selectedMiracleType,
     selectedPlanet,
     selectedSystem,
     setActivePage,
     setCompareDraftSeed,
     setDraftSeed,
     setEraFilter,
+    setSelectedMiracleTargetId,
+    setSelectedMiracleType,
     setSelectedEventId,
     setTemplateId,
     shareWarnings,
     sourceLabelById,
     spaceStats,
     templateId,
+    miracleTargetOptions,
     universe,
     compareSeedNow,
     selectCivilization,
@@ -233,6 +242,19 @@ export function App({ initialPage = "overview" }: AppProps = {}) {
           selectedCivilization={selectedCivilization}
           sourceLabelById={sourceLabelById}
           onSelectCivilization={selectCivilization}
+        />
+      )}
+
+      {activePage === "miracles" && (
+        <MiraclePanel
+          universe={universe}
+          targetOptions={miracleTargetOptions}
+          selectedMiracleType={selectedMiracleType}
+          selectedTargetId={selectedMiracleTargetId}
+          onSelectMiracleType={setSelectedMiracleType}
+          onSelectTarget={setSelectedMiracleTargetId}
+          onApplyMiracle={applySelectedMiracle}
+          onClearInterventions={clearInterventions}
         />
       )}
 

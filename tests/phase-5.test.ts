@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { App } from "../src/App";
@@ -9,8 +8,6 @@ import {
   allStructuredLaws,
   civilizationPathIsCoherent,
   fixedSeeds,
-  listSourceFiles,
-  pathFromTest,
 } from "./helpers";
 
 describe("阶段 5 文明演化与神话生成", () => {
@@ -75,14 +72,4 @@ describe("阶段 5 文明演化与神话生成", () => {
     expect(markup).toContain("文明历史");
   });
 
-  it("阶段 5 没有提前实现阶段 6 的造物主干预或奇迹交互", () => {
-    const sourceRoot = pathFromTest(import.meta.url, "../src");
-    const forbiddenPatterns = [/造物主模式/, /奇迹点/, /干预日志/, /改写局部法则/, /\bMiracle\b/, /\bIntervention\b/];
-    const offenders = listSourceFiles(sourceRoot).filter((file) => {
-      const source = readFileSync(file, "utf8");
-      return forbiddenPatterns.some((pattern) => pattern.test(source));
-    });
-
-    expect(offenders).toEqual([]);
-  });
 });

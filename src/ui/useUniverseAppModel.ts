@@ -5,10 +5,14 @@ import {
   filterTimelineByEra,
   formatSeed,
   generateUniverse,
+  miracleDefinitions,
   normalizeSeed,
   type Civilization,
   type EraId,
   type Galaxy,
+  type InterventionInput,
+  type MiracleTargetKind,
+  type MiracleType,
   type Planet,
   type StarSystem,
   type UniverseTemplateId,
@@ -19,7 +23,13 @@ const DEFAULT_SEED = "LUX-7F3A-91C2";
 const DEFAULT_TEMPLATE_ID: UniverseTemplateId = "high_magic";
 const DEFAULT_COMPARE_SEED = "ASH-44DE-0101";
 
-export type AppPageId = "overview" | "space" | "civilizations" | "timeline" | "laws" | "logs";
+export type AppPageId = "overview" | "space" | "civilizations" | "miracles" | "timeline" | "laws" | "logs";
+
+export type MiracleTargetOption = {
+  id: string;
+  label: string;
+  kind: MiracleTargetKind;
+};
 
 export const eraFilterOptions: Array<{ id: EraId | "all"; label: string }> = [
   { id: "all", label: "全部" },
@@ -56,9 +66,12 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
   const [selectedSystemId, setSelectedSystemId] = useState<string | undefined>();
   const [selectedPlanetId, setSelectedPlanetId] = useState<string | undefined>();
   const [selectedCivilizationId, setSelectedCivilizationId] = useState<string | undefined>();
+  const [interventionInputs, setInterventionInputs] = useState<InterventionInput[]>([]);
+  const [selectedMiracleType, setSelectedMiracleType] = useState<MiracleType>(miracleDefinitions[0].type);
+  const [selectedMiracleTargetId, setSelectedMiracleTargetId] = useState<string | undefined>();
   const copyResetTimerRef = useRef<number | undefined>(undefined);
 
-  const universe = useMemo(() => generateUniverse({ seed: activeSeed, templateId }), [activeSeed, templateId]);
+  const universe = useMemo(() => generateUniverse({ seed: activeSeed, templateId, interventions: interventionInputs }), [activeSeed, templateId, interventionInputs]);
   const filteredTimeline = useMemo(() => filterTimelineByEra(universe.timeline, eraFilter), [universe.timeline, eraFilter]);
   const selectedEvent = filteredTimeline.find((event) => event.id === selectedEventId) ?? filteredTimeline[0] ?? firstItem(universe.timeline, "时间线事件");
   const comparison = useMemo(() => compareUniverseLaws(activeSeed, compareSeed, templateId), [activeSeed, compareSeed, templateId]);
@@ -69,6 +82,7 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
   const spaceStats = useMemo(() => summarizeSpace(universe), [universe]);
   const civilizationStats = useMemo(() => summarizeCivilizations(universe), [universe]);
   const sourceLabelById = useMemo(() => buildSourceLabelMap(universe), [universe]);
+  const miracleTargetOptions = useMemo(() => buildMiracleTargetOptions(universe, selectedMiracleType), [universe, selectedMiracleType]);
 
   useEffect(() => {
     setSelectedEventId(universe.timeline[0]?.id);
@@ -91,6 +105,15 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
   }, [filteredTimeline, universe.timeline]);
 
   useEffect(() => {
+    setSelectedMiracleTargetId((current) => {
+      if (current && miracleTargetOptions.some((option) => option.id === current)) {
+        return current;
+      }
+      return miracleTargetOptions[0]?.id;
+    });
+  }, [miracleTargetOptions]);
+
+  useEffect(() => {
     return () => {
       if (copyResetTimerRef.current !== undefined && typeof window !== "undefined") {
         window.clearTimeout(copyResetTimerRef.current);
@@ -100,12 +123,14 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
 
   function createUniverse() {
     setActiveSeed(normalizeSeed(draftSeed));
+    setInterventionInputs([]);
   }
 
   function randomizeSeed() {
     const nextSeed = createClientSeed();
     setDraftSeed(formatSeed(nextSeed));
     setActiveSeed(nextSeed);
+    setInterventionInputs([]);
   }
 
   async function copyShare() {
@@ -159,6 +184,30 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
     setSelectedCivilizationId(civilization.id);
   }
 
+  function changeTemplateId(nextTemplateId: UniverseTemplateId) {
+    setTemplateId(nextTemplateId);
+    setInterventionInputs([]);
+  }
+
+  function applySelectedMiracle() {
+    if (!selectedMiracleTargetId) {
+      return;
+    }
+    setInterventionInputs((current) => [
+      ...current,
+      {
+        id: `ui-${String(current.length + 1).padStart(2, "0")}`,
+        miracleType: selectedMiracleType,
+        targetId: selectedMiracleTargetId,
+      },
+    ]);
+    setActivePage("miracles");
+  }
+
+  function clearInterventions() {
+    setInterventionInputs([]);
+  }
+
   function scheduleCopyStateReset() {
     if (typeof window === "undefined") {
       return;
@@ -174,7 +223,9 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
 
   return {
     activePage,
+    applySelectedMiracle,
     civilizationStats,
+    clearInterventions,
     compareDraftSeed,
     comparison,
     copyShare,
@@ -183,18 +234,23 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
     draftSeed,
     eraFilter,
     filteredTimeline,
+    miracleTargetOptions,
     randomizeSeed,
     selectedCivilization,
     selectedEvent,
     selectedGalaxy,
+    selectedMiracleTargetId,
+    selectedMiracleType,
     selectedPlanet,
     selectedSystem,
     setActivePage,
     setCompareDraftSeed,
     setDraftSeed,
     setEraFilter,
+    setSelectedMiracleTargetId,
+    setSelectedMiracleType,
     setSelectedEventId,
-    setTemplateId,
+    setTemplateId: changeTemplateId,
     shareWarnings,
     sourceLabelById,
     spaceStats,
@@ -206,6 +262,47 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
     selectPlanet,
     selectSystem,
   };
+}
+
+function buildMiracleTargetOptions(universe: ReturnType<typeof generateUniverse>, miracleType: MiracleType): MiracleTargetOption[] {
+  const definition = miracleDefinitions.find((entry) => entry.type === miracleType) ?? miracleDefinitions[0];
+  if (definition.targetKind === "universe") {
+    return [{ id: `universe.${universe.seed}`, label: "整个宇宙", kind: "universe" }];
+  }
+  if (definition.targetKind === "star_system") {
+    return universe.galaxies.flatMap((galaxy) =>
+      galaxy.starSystems.map((system) => ({
+        id: system.id,
+        label: `${galaxy.name} / ${system.name}`,
+        kind: "star_system" as const,
+      })),
+    );
+  }
+  if (definition.targetKind === "planet") {
+    return universe.galaxies.flatMap((galaxy) =>
+      galaxy.starSystems.flatMap((system) =>
+        system.planets.map((planet) => ({
+          id: planet.id,
+          label: `${galaxy.name} / ${system.name} / ${planet.name}`,
+          kind: "planet" as const,
+        })),
+      ),
+    );
+  }
+  if (definition.targetKind === "mythology") {
+    return universe.civilizations
+      .filter((civilization) => civilization.mythology.type !== "none")
+      .map((civilization) => ({
+        id: civilization.id,
+        label: `${civilization.mythology.deityName} / ${civilization.name}`,
+        kind: "mythology" as const,
+      }));
+  }
+  return universe.civilizations.map((civilization) => ({
+    id: civilization.id,
+    label: `${civilization.name} / ${civilization.originPlanetName}`,
+    kind: "civilization" as const,
+  }));
 }
 
 function readInitialShare(search?: string) {

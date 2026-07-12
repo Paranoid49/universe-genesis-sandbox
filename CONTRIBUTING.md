@@ -13,6 +13,7 @@
 - [docs/phase-3.md](docs/phase-3.md)：纪元时间线、事件因果和时间线影响摘要。
 - [docs/phase-4.md](docs/phase-4.md)：星系、恒星、行星、生命样本、局部探索路径和阶段 5 前置契约。
 - [docs/phase-5.md](docs/phase-5.md)：文明实体、文明路径、神话系统、文明历史和阶段 6 禁区。
+- [docs/phase-6.md](docs/phase-6.md)：造物主干预、结构化奇迹、干预日志、反噬状态和阶段 7 禁区。
 - [docs/architecture.md](docs/architecture.md)：模块边界、依赖方向、生成数据流和测试组织。
 
 如果你的变更会改变产品范围、数据契约、阶段门禁或用户路径，应先更新对应文档，再改代码。
@@ -88,6 +89,8 @@ docs/               阶段规格与项目文档
 - 新增内容池优先放入 `src/sim/content/`，核心生成器只保留算法、权重消费和结构组装。
 - 阶段 4 局部对象生成应消费 `UniverseSummary.timelineImpact`，不要从页面文案反推生成倾向。
 - 阶段 5 文明生成应从 `Biosphere.civilizationSeed` 或明确的生命行星来源派生，不要脱离阶段 4 局部对象凭空生成。
+- 阶段 6 干预必须来自显式 `InterventionInput[]`，不要读取浏览器时间、本地存储或任何不可复现输入。
+- 阶段 6 只能输出结构化干预数据，不要提前实现阶段 7 的可视化观察台。
 
 ## 测试要求
 

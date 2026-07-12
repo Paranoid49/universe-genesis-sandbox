@@ -44,6 +44,7 @@ a {
 .overview-snapshot,
 .space-panel,
 .civilization-panel,
+.miracle-panel,
 .metrics-panel,
 .timeline-panel,
 .laws-panel,
@@ -199,7 +200,7 @@ button:hover,
 
 .page-navigation {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 10px;
   margin-top: 14px;
   padding: 10px;
@@ -338,6 +339,12 @@ button:hover,
   border-radius: 8px;
 }
 
+.miracle-panel {
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 8px;
+}
+
 .space-stats {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -352,8 +359,16 @@ button:hover,
   margin-bottom: 14px;
 }
 
+.miracle-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
 .space-stats div,
-.civilization-stats div {
+.civilization-stats div,
+.miracle-stats div {
   display: grid;
   gap: 4px;
   min-height: 72px;
@@ -363,13 +378,15 @@ button:hover,
 }
 
 .space-stats span,
-.civilization-stats span {
+.civilization-stats span,
+.miracle-stats span {
   color: #bfb3a4;
   font-size: 0.78rem;
 }
 
 .space-stats strong,
-.civilization-stats strong {
+.civilization-stats strong,
+.miracle-stats strong {
   color: #7fc9af;
   font-size: 1.45rem;
 }
@@ -386,11 +403,20 @@ button:hover,
   gap: 12px;
 }
 
+.miracle-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.85fr) minmax(320px, 1fr) minmax(380px, 1.15fr);
+  gap: 12px;
+}
+
 .space-list,
 .space-detail,
 .civilization-list,
 .civilization-detail,
-.civilization-history {
+.civilization-history,
+.miracle-controls,
+.miracle-summary,
+.intervention-log {
   min-height: 460px;
   padding: 12px;
   border-radius: 8px;
@@ -404,12 +430,105 @@ button:hover,
   gap: 10px;
 }
 
+.miracle-controls,
+.miracle-summary,
+.intervention-log {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
 .space-list h4,
 .civilization-list h4,
-.civilization-history h4 {
+.civilization-history h4,
+.miracle-controls h4,
+.miracle-summary h4,
+.intervention-log h4 {
   margin: 0;
   color: #e9c46a;
   font-size: 0.94rem;
+}
+
+.miracle-controls label {
+  display: grid;
+  gap: 5px;
+}
+
+.miracle-controls label span {
+  color: #cdbf9d;
+  font-size: 0.72rem;
+}
+
+.miracle-controls select {
+  width: 100%;
+}
+
+.miracle-definition,
+.miracle-summary article,
+.intervention-log article,
+.miracle-summary > p,
+.intervention-log > p {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #1f1a17;
+}
+
+.miracle-definition b,
+.miracle-summary b,
+.intervention-log b {
+  color: #f7f0e4;
+}
+
+.miracle-definition p,
+.miracle-summary p,
+.intervention-log p {
+  color: #ded1c1;
+  line-height: 1.55;
+}
+
+.miracle-definition small,
+.miracle-summary span,
+.intervention-log span {
+  color: #bfb3a4;
+  line-height: 1.45;
+}
+
+.miracle-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.miracle-deltas {
+  display: grid;
+  gap: 7px;
+}
+
+.miracle-deltas span {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: #cdbf9d;
+  background: #1f1a17;
+}
+
+.miracle-deltas b,
+.miracle-summary article b {
+  color: #7fc9af;
+}
+
+.intervention-log h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.backlash-entry {
+  border: 1px solid rgba(183, 115, 154, 0.45);
 }
 
 .space-list > div,
@@ -1078,7 +1197,9 @@ button:hover,
   .space-grid,
   .space-stats,
   .civilization-grid,
-  .civilization-stats {
+  .civilization-stats,
+  .miracle-grid,
+  .miracle-stats {
     grid-template-columns: 1fr;
   }
 
@@ -1086,7 +1207,10 @@ button:hover,
   .space-detail,
   .civilization-list,
   .civilization-detail,
-  .civilization-history {
+  .civilization-history,
+  .miracle-controls,
+  .miracle-summary,
+  .intervention-log {
     min-height: unset;
   }
 
@@ -1115,6 +1239,7 @@ button:hover,
 
   .tool-strip,
   .share-panel,
+  .miracle-actions,
   .compare-controls,
   .detail-columns,
   .event-causality,

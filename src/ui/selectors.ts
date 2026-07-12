@@ -35,12 +35,17 @@ export function buildSourceLabelMap(universe: UniverseSummary): Map<string, stri
   const interactionEntries = universe.lawInteractions.map((interaction) => [interaction.id, interactionKindName(interaction.kind)] as const);
   const metricEntries = Object.keys(universe.metrics).map((metricId) => [`metric.${metricId}`, metricName(metricId)] as const);
   const eventEntries = universe.timeline.map((event) => [event.id, event.title] as const);
+  const miracleEntries = [
+    ["miracle.interventions", "阶段 6 造物主干预"] as const,
+    ["miracle-overuse", "奇迹过度使用"] as const,
+    ...universe.miracleState.appliedMiracles.map((miracle) => [miracle.id, miracle.title] as const),
+  ];
   const civilizationEntries = universe.civilizations.flatMap((civilization) => [
     [civilization.id, civilization.name] as const,
     ...civilization.historyEvents.map((event) => [event.id, event.title] as const),
   ]);
 
-  return new Map([...lawEntries, ...interactionEntries, ...metricEntries, ...eventEntries, ...civilizationEntries]);
+  return new Map([...lawEntries, ...interactionEntries, ...metricEntries, ...eventEntries, ...miracleEntries, ...civilizationEntries]);
 }
 
 export function topInfluences(influences: MetricInfluence[]): MetricInfluence[] {

@@ -2,6 +2,7 @@ export { generateUniverse } from "./universe";
 export { generateGalaxies } from "./galaxies";
 export { generateCivilizations } from "./civilizations";
 export { compareUniverseLaws } from "./compare";
+export { miracleDefinitions } from "./content/miracles";
 export { decodeShareCode, decodeShareParams } from "./share";
 export { filterTimelineByEra, summarizeTimelineImpact } from "./timeline";
 export { DEFAULT_TEMPLATE_ID, getTemplate, getTemplateByShortCode, UNIVERSE_TEMPLATES } from "./templates";
@@ -17,11 +18,15 @@ export type {
   CivilizationEventType,
   CivilizationPath,
   CivilizationSeed,
+  CreatorMode,
   EraId,
   GenerateUniverseInput,
   Galaxy,
   GalaxyType,
   DomainLawDiff,
+  InterventionInput,
+  InterventionLog,
+  InterventionProbabilityShift,
   LawComparison,
   LawDomain,
   LawDomainId,
@@ -31,6 +36,13 @@ export type {
   LocalGenerationBiasId,
   MetricId,
   MetricInfluence,
+  Miracle,
+  MiracleCost,
+  MiracleDefinition,
+  MiracleOveruseLevel,
+  MiracleState,
+  MiracleTargetKind,
+  MiracleType,
   MythologySystem,
   MythologyType,
   Planet,

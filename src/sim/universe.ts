@@ -1,6 +1,7 @@
 import { generateExplanations, generateObservationLog } from "./explain";
 import { generateCivilizations } from "./civilizations";
 import { generateGalaxies } from "./galaxies";
+import { applyInterventions } from "./interventions";
 import { generateLawInteractions, generateLaws } from "./laws";
 import { generateMetrics } from "./metrics";
 import { generateDescription, generateTagline, generateUniverseName } from "./names";
@@ -20,12 +21,26 @@ export function generateUniverse(input: GenerateUniverseInput): UniverseSummary 
   const name = generateUniverseName(template, root.fork("names.universe"));
   const tagline = generateTagline(template, laws, metrics);
   const description = generateDescription(template, laws, metrics);
-  const timeline = generateTimeline(template, laws, metrics, root.fork("timeline"));
-  const timelineImpact = summarizeTimelineImpact(timeline, metrics);
-  const galaxies = generateGalaxies({ laws, metrics, timelineImpact }, root.fork("galaxies"));
-  const civilizations = generateCivilizations({ laws, metrics, timelineImpact, galaxies }, root.fork("civilizations"));
-  const explanations = generateExplanations(template, laws, metrics, timeline);
-  const observationLog = generateObservationLog(timeline, metrics, laws);
+  const baseTimeline = generateTimeline(template, laws, metrics, root.fork("timeline"));
+  const baseTimelineImpact = summarizeTimelineImpact(baseTimeline, metrics);
+  const galaxies = generateGalaxies({ laws, metrics, timelineImpact: baseTimelineImpact }, root.fork("galaxies"));
+  const civilizations = generateCivilizations({ laws, metrics, timelineImpact: baseTimelineImpact, galaxies }, root.fork("civilizations"));
+  const interventionResult = applyInterventions(
+    {
+      seed,
+      metrics,
+      timeline: baseTimeline,
+      galaxies,
+      civilizations,
+    },
+    input.interventions,
+    root.fork("interventions"),
+  );
+  const finalMetrics = interventionResult.metrics;
+  const finalTimeline = interventionResult.timeline;
+  const finalTimelineImpact = summarizeTimelineImpact(finalTimeline, finalMetrics);
+  const explanations = generateExplanations(template, laws, finalMetrics, finalTimeline);
+  const observationLog = generateObservationLog(finalTimeline, finalMetrics, laws);
   const shareCode = createShareCode(seed, template.id);
   const shareUrl = createShareUrl(seed, template.id);
 
@@ -43,13 +58,14 @@ export function generateUniverse(input: GenerateUniverseInput): UniverseSummary 
     archetype: template.archetype,
     tagline,
     description,
-    metrics,
+    metrics: finalMetrics,
     laws,
     lawInteractions,
-    timeline,
-    timelineImpact,
+    timeline: finalTimeline,
+    timelineImpact: finalTimelineImpact,
     galaxies,
     civilizations,
+    miracleState: interventionResult.miracleState,
     explanations,
     observationLog,
   };

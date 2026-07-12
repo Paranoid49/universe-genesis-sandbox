@@ -38,6 +38,7 @@ seed + templateId + rulesetVersion
   -> timelineImpact
   -> galaxies
   -> civilizations
+  -> miracleState / interventionLog
   -> explanations / observationLog / share
   -> UniverseSummary
 ```
@@ -51,6 +52,7 @@ seed + templateId + rulesetVersion
 - 新生成模块必须使用 `RandomStream.fork("稳定命名空间")` 创建局部随机流。
 - 生成规则、权重、素材池或字段语义变化时，必须同步评估 `RULESET_VERSION`、`RULESET_SHORT_CODE`、测试基线和阶段文档。
 - 单纯 UI、测试或文档调整不得改变 `UniverseSummary` 的确定性输出。
+- 阶段 6 之后，干预后的宇宙复现边界为 `seed + templateId + rulesetVersion + InterventionInput[]`。
 
 ## 4. UI 容器边界
 
@@ -62,6 +64,8 @@ seed + templateId + rulesetVersion
 - 向 `App.tsx` 和组件提供稳定的页面数据与回调。
 
 `App.tsx` 只负责页面结构装配。新增页面时，应优先新增展示组件和必要的 view-model 状态，不要把新业务状态直接堆回 `App.tsx`。
+
+阶段 6 的干预状态属于 view-model 显式状态。页面可以构造 `InterventionInput[]` 并传入生成入口，但不得在模拟核心中读取浏览器状态。
 
 ## 5. 生成器扩展规则
 
@@ -89,7 +93,8 @@ tests/phase-1.test.ts  seed、分享、规则门禁和基础完整性
 tests/phase-2.test.ts  法则、指标和法则对比
 tests/phase-3.test.ts  时间线、纪元和后续影响
 tests/phase-4.test.ts  星系、恒星系、行星和生命样本
-tests/phase-5.test.ts  文明、神话和阶段 6 禁区
+tests/phase-5.test.ts  文明和神话
+tests/phase-6.test.ts  造物主干预、奇迹复现和阶段 7 禁区
 tests/helpers.ts       共享测试常量和断言
 ```
 

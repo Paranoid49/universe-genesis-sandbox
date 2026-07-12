@@ -202,6 +202,40 @@ export function civilizationEventTypeName(value: string): string {
   return names[value] ?? value;
 }
 
+export function miracleTypeName(value: string): string {
+  const names: Record<string, string> = {
+    bless_planet: "祝福行星",
+    stabilize_star: "稳定恒星",
+    seed_life: "注入生命",
+    grant_magic: "赐予魔法",
+    send_catastrophe: "降下灾难",
+    revive_civilization: "复活文明",
+    seal_deity: "封印神明",
+    repair_causality: "修复因果裂缝",
+  };
+  return names[value] ?? value;
+}
+
+export function miracleTargetKindName(value: string): string {
+  const names: Record<string, string> = {
+    universe: "宇宙",
+    planet: "行星",
+    star_system: "恒星系",
+    civilization: "文明",
+    mythology: "神话系统",
+  };
+  return names[value] ?? value;
+}
+
+export function miracleOveruseLevelName(value: string): string {
+  const names: Record<string, string> = {
+    none: "可控",
+    strained: "压力偏高",
+    backlash: "反噬",
+  };
+  return names[value] ?? value;
+}
+
 export function signed(value: number): string {
   return value > 0 ? `+${value}` : `${value}`;
 }

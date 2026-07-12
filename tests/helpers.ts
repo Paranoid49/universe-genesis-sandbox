@@ -16,7 +16,7 @@ export const fixedSeeds = [
 export const lawDomainIds: LawDomainId[] = ["physics", "magic", "life", "consciousness", "divinity", "causality"];
 export const metricIds: MetricId[] = ["age", "stability", "lifePotential", "civilizationPotential", "magicIntensity", "divineActivity", "causalityIntegrity"];
 export const eraIds: EraId[] = ["creation", "stars", "elements", "life", "civilization", "myth", "ascension", "ending"];
-export const expectedRulesetContentHash = "4628dcc9eeca171a3e7ac8de5dd17934b31c8cdb04d5441106d6b769cbe1770e";
+export const expectedRulesetContentHash = "9de30342682d1646d9adb0711d0d92ab9368054e0d470380443b7103a8a3f2f1";
 
 export function expectCompleteUniverse(universe: UniverseSummary): void {
   expect(universe.seed).not.toBe("");
@@ -33,6 +33,8 @@ export function expectCompleteUniverse(universe: UniverseSummary): void {
   expect(universe.timelineImpact.eventCount).toBe(universe.timeline.length);
   expect(universe.timelineImpact.localBiases.length).toBeGreaterThanOrEqual(8);
   expect(universe.galaxies.length).toBeGreaterThanOrEqual(12);
+  expect(universe.miracleState.availableMiracles.length).toBeGreaterThanOrEqual(6);
+  expect(universe.miracleState.interventionLog.length).toBe(universe.miracleState.appliedMiracles.length);
 }
 
 export function allStructuredLaws(universe: UniverseSummary) {
