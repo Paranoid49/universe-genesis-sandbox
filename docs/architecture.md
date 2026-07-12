@@ -73,6 +73,10 @@ seed + templateId + rulesetVersion
 
 阶段 6 的干预状态属于 view-model 显式状态。页面可以构造 `InterventionInput[]` 并传入生成入口，但不得在模拟核心中读取浏览器状态。
 
+阶段 7 的 `observationProjection.ts` 是只读 UI 投影层。它只能把 `UniverseSummary` 转换为稳定二维坐标、叠层强度和文字摘要；`ObservationConsole` 负责层级、叠层、节点与时间位置等瞬时视图状态。两者都不得修改模拟对象或反向进入生成流水线。
+
+阶段 8 的 `archive.ts` 定义 A1 纯契约、校验和不可变集合操作，`archiveStorage.ts` 是唯一访问 `localStorage` 的模块，`useUniverseArchive.ts` 负责持久化成功后再提交内存状态。存档只保存分享码和用户元数据，恢复由 `useUniverseAppModel.ts` 解码分享码后重新进入生成器。
+
 ## 5. 生成器扩展规则
 
 当前时间线影响摘要和文明权重公式已经拆出，`galaxies` 仍承担部分空间权重公式。后续阶段继续扩展时，应保持以下分层：
@@ -101,6 +105,8 @@ tests/phase-3.test.ts  时间线、纪元和后续影响
 tests/phase-4.test.ts  星系、恒星系、行星和生命样本
 tests/phase-5.test.ts  文明和神话
 tests/phase-6.test.ts  造物主干预、奇迹复现和阶段 7 禁区
+tests/phase-7.test.ts  观察投影确定性、三级层级、叠层和只读边界
+tests/phase-8.test.ts  A1 存档、搜索排序、导入导出、容量和恢复契约
 tests/helpers.ts       共享测试常量和断言
 tests/architecture.test.ts 架构依赖和文件规模门禁
 tests/ui/*.test.tsx    浏览器交互、键盘和无障碍验收

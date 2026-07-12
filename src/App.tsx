@@ -3,17 +3,17 @@ import { LogColumn, SectionHeader } from "./components/common";
 import { CivilizationPanel } from "./components/CivilizationPanel";
 import { PageNavigation, UniverseToolbar } from "./components/AppChrome";
 import { MiraclePanel } from "./components/MiraclePanel";
+import { ObservationConsole } from "./components/ObservationConsole";
 import { SpaceExplorer } from "./components/SpaceExplorer";
 import { EventDetail, TimelineImpactPanel } from "./components/TimelinePanels";
+import { UniverseLibrary } from "./components/UniverseLibrary";
 import { eraName, eventTypeName, interactionKindName, lawDomainName, metricName, polarityName, signed } from "./ui/labels";
 import { topInfluences } from "./ui/selectors";
 import { eraFilterOptions, useUniverseAppModel, type AppPageId } from "./ui/useUniverseAppModel";
-
 export type AppProps = {
   initialPage?: AppPageId;
   search?: string;
 };
-
 export function App({ initialPage = "overview", search }: AppProps = {}) {
   const {
     activePage,
@@ -30,6 +30,7 @@ export function App({ initialPage = "overview", search }: AppProps = {}) {
     filteredTimeline,
     compareInputError,
     randomizeSeed,
+    restoreArchivedUniverse,
     selectedCivilization,
     selectedEvent,
     selectedGalaxy,
@@ -58,7 +59,6 @@ export function App({ initialPage = "overview", search }: AppProps = {}) {
     selectPlanet,
     selectSystem,
   } = useUniverseAppModel({ initialPage, search });
-
   return (
     <main className="app-shell">
       <UniverseToolbar
@@ -73,7 +73,6 @@ export function App({ initialPage = "overview", search }: AppProps = {}) {
         onCopy={copyShare}
       />
       <PageNavigation activePage={activePage} onChange={setActivePage} />
-
       {activePage === "overview" && (
         <section className="page-stack" aria-label="创世总览">
           <section className="overview-band">
@@ -166,6 +165,8 @@ export function App({ initialPage = "overview", search }: AppProps = {}) {
         </section>
         </section>
       )}
+      {activePage === "observe" && <ObservationConsole key={universe.shareCode} universe={universe} />}
+      {activePage === "library" && <UniverseLibrary universe={universe} onRestore={restoreArchivedUniverse} />}
 
       {activePage === "space" && (
         <SpaceExplorer

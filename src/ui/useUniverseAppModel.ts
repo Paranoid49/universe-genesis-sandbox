@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   compareUniverseLaws,
   assertGenerateUniverseInput,
+  decodeShareCode,
   filterTimelineByEra,
   formatSeed,
   generateUniverse,
@@ -28,7 +29,7 @@ const DEFAULT_SEED = "LUX-7F3A-91C2";
 const DEFAULT_TEMPLATE_ID: UniverseTemplateId = "high_magic";
 const DEFAULT_COMPARE_SEED = "ASH-44DE-0101";
 
-export type AppPageId = "overview" | "space" | "civilizations" | "miracles" | "timeline" | "laws" | "logs";
+export type AppPageId = "overview" | "observe" | "space" | "civilizations" | "miracles" | "timeline" | "laws" | "logs" | "library";
 
 export type { MiracleTargetOption } from "./miracleTargets";
 
@@ -170,6 +171,25 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
     setInterventionInputs([]);
   }
 
+  function restoreArchivedUniverse(shareCode: string): string | undefined {
+    const decoded = decodeShareCode(shareCode);
+    if (!decoded || decoded.warnings.length > 0 || decoded.rulesetVersion !== RULESET_VERSION) return "存档分享码无效或不受当前版本支持。";
+    try {
+      assertGenerateUniverseInput(decoded);
+      generateUniverse(decoded);
+    } catch {
+      return "存档分支无法通过当前生成契约恢复。";
+    }
+    setDraftSeed(formatSeed(decoded.seed));
+    setActiveSeed(decoded.seed);
+    setTemplateId(decoded.templateId);
+    setInterventionInputs(decoded.interventions);
+    setSeedInputError(undefined);
+    setCompareInputError(undefined);
+    setActivePage("overview");
+    return undefined;
+  }
+
   function changeDraftSeed(value: string) {
     setDraftSeed(value);
     if (seedInputError) setSeedInputError(undefined);
@@ -196,6 +216,7 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
     compareInputError,
     miracleTargetOptions,
     randomizeSeed,
+    restoreArchivedUniverse,
     selectedCivilization,
     selectedEvent,
     selectedGalaxy,

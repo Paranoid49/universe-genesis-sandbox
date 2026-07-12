@@ -50,6 +50,16 @@ describe("架构边界门禁", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("浏览器本地存储只允许由存档适配器访问", () => {
+    const offenders = files.filter((file) => {
+      const accessesStorage = descendants(parseSourceFile(file)).some((node) => ts.isPropertyAccessExpression(node)
+        && ((ts.isIdentifier(node.expression) && node.expression.text === "window" && node.name.text === "localStorage")
+          || (ts.isIdentifier(node.expression) && node.expression.text === "localStorage")));
+      return accessesStorage && !file.endsWith(`${sep}ui${sep}archiveStorage.ts`);
+    });
+    expect(offenders).toEqual([]);
+  });
+
   it("关键编排文件保持在约定规模内", () => {
     const limits = new Map([
       ["src/App.tsx", 340],

@@ -1,5 +1,6 @@
 ﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
+import { sep } from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { App, type AppProps } from "../src/App";
@@ -177,10 +178,10 @@ describe("阶段 6 造物主干预与奇迹系统", () => {
     expect(markup).toContain("概率变化");
   });
 
-  it("阶段 6 没有提前实现阶段 7 的可视化观察台能力", () => {
+  it("阶段 6 模拟核心没有混入阶段 7 的可视化观察台职责", () => {
     const sourceRoot = pathFromTest(import.meta.url, "../src");
     const forbiddenPatterns = [/星系点云/, /宇宙背景视觉/, /缩放层级/, /时间播放/, /信息叠层/, /\bThree\b/, /\bWebGL\b/, /\bcanvas\b/i];
-    const offenders = listSourceFiles(sourceRoot).filter((file) => {
+    const offenders = listSourceFiles(sourceRoot).filter((file) => file.includes(`${sep}sim${sep}`)).filter((file) => {
       const source = readFileSync(file, "utf8");
       return forbiddenPatterns.some((pattern) => pattern.test(source));
     });

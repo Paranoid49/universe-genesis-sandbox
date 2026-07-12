@@ -1,15 +1,17 @@
-import { BarChart3, BookOpen, Clipboard, Dices, History, ScrollText, Sparkles, Telescope, UsersRound } from "lucide-react";
+import { BarChart3, BookMarked, BookOpen, Clipboard, Dices, History, Radar, ScrollText, Sparkles, Telescope, UsersRound } from "lucide-react";
 import { RULESET_VERSION, UNIVERSE_TEMPLATES, type UniverseTemplateId } from "../sim";
 import type { AppPageId } from "../ui/useUniverseAppModel";
 
 const appPageOptions: Array<{ id: AppPageId; label: string; description: string; icon: typeof BarChart3 }> = [
   { id: "overview", label: "概览", description: "宇宙摘要与指标", icon: BarChart3 },
+  { id: "observe", label: "观察台", description: "二维宇宙投影与时间浏览", icon: Radar },
   { id: "space", label: "星系", description: "星系、恒星系与行星", icon: Telescope },
   { id: "civilizations", label: "文明", description: "文明演化与神话", icon: UsersRound },
   { id: "miracles", label: "干预", description: "造物主干预与奇迹", icon: Sparkles },
   { id: "timeline", label: "纪元", description: "时间线与阶段影响", icon: History },
   { id: "laws", label: "法则", description: "法则、关系与对比", icon: BookOpen },
   { id: "logs", label: "日志", description: "观察记录与终局", icon: ScrollText },
+  { id: "library", label: "图书馆", description: "本地存档、收藏与恢复", icon: BookMarked },
 ];
 
 export function UniverseToolbar({
