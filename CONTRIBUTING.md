@@ -9,13 +9,14 @@
 - [docs/README.md](docs/README.md)：当前文档导航与事实来源优先级。
 - [docs/product-definition.md](docs/product-definition.md)：产品范围、核心体验与产品原则。
 - [docs/milestones.md](docs/milestones.md)：产品重构步骤、可运行产物与完成标准。
+- [docs/legacy-module-migration.md](docs/legacy-module-migration.md)：旧模块的保留、增强、降级、替换和删除要求。
 - [docs/architecture.md](docs/architecture.md)：模块边界、依赖方向、生成数据流和测试组织。
 - [docs/quality-gates.md](docs/quality-gates.md)：自动化测试、覆盖率和发布门禁。
 - [docs/non-functional-requirements.md](docs/non-functional-requirements.md)：性能、兼容性、可靠性和无障碍要求。
 
 旧阶段规格和历史评审统一位于 [docs/archive](docs/archive/README.md)，只用于理解已有实现，不作为新开发依据。
 
-如果变更会改变产品范围、数据契约、实施步骤、质量门禁或用户路径，应先更新对应的当前文档，再改代码。
+如果变更会改变产品范围、旧模块去留、数据契约、实施步骤、质量门禁或用户路径，应先更新对应的当前文档，再改代码。
 
 ## 本地开发
 

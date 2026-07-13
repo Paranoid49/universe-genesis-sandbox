@@ -70,6 +70,7 @@ npm run check
 - [文档导航](docs/README.md)
 - [当前产品定义](docs/product-definition.md)
 - [产品重构实施路线](docs/milestones.md)
+- [旧产品模块迁移矩阵](docs/legacy-module-migration.md)
 - [架构说明](docs/architecture.md)
 - [质量门禁](docs/quality-gates.md)
 - [非功能需求](docs/non-functional-requirements.md)
