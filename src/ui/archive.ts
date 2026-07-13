@@ -1,4 +1,4 @@
-import { assertGenerateUniverseInput, decodeShareCode, generateUniverse, RULESET_VERSION, type UniverseSummary, type UniverseTemplateId } from "../sim";
+import { assertGenerateUniverseInput, decodeShareCode, formatSeed, generateUniverse, RULESET_VERSION, type UniverseSummary, type UniverseTemplateId } from "../sim";
 
 export const ARCHIVE_FORMAT = "ugs-universe-archive";
 export const ARCHIVE_VERSION = "A1";
@@ -76,6 +76,23 @@ export function serializeArchive(entries: UniverseArchiveEntry[], now: string): 
 }
 
 export function parseArchive(raw: string): UniverseArchiveEnvelope {
+  return parseArchiveEnvelope(raw, true);
+}
+
+export function parseStoredArchive(raw: string): UniverseArchiveEnvelope {
+  return parseArchiveEnvelope(raw, false);
+}
+
+export async function parseArchiveAsync(raw: string): Promise<UniverseArchiveEnvelope> {
+  const envelope = parseArchiveEnvelope(raw, false);
+  for (let index = 0; index < envelope.entries.length; index += 1) {
+    verifyRestorableEntry(envelope.entries[index], index);
+    if ((index + 1) % 5 === 0) await yieldToBrowser();
+  }
+  return envelope;
+}
+
+function parseArchiveEnvelope(raw: string, verifyGeneration: boolean): UniverseArchiveEnvelope {
   let value: unknown;
   try {
     value = JSON.parse(raw);
@@ -87,7 +104,7 @@ export function parseArchive(raw: string): UniverseArchiveEnvelope {
   if (typeof value.exportedAt !== "string" || !isIsoDate(value.exportedAt)) throw new ArchiveError("存档导出时间无效。");
   if (!Array.isArray(value.entries)) throw new ArchiveError("存档条目必须是数组。");
   if (value.entries.length > ARCHIVE_LIMIT) throw new ArchiveError(`导入条目超过 ${ARCHIVE_LIMIT} 条上限。`);
-  const entries = value.entries.map((entry, index) => validateEntry(entry, index));
+  const entries = value.entries.map((entry, index) => validateEntry(entry, index, verifyGeneration));
   if (new Set(entries.map((entry) => entry.id)).size !== entries.length) throw new ArchiveError("存档包含重复条目 ID。");
   return { format: ARCHIVE_FORMAT, version: ARCHIVE_VERSION, exportedAt: value.exportedAt, entries: sortArchiveEntries(entries) };
 }
@@ -99,13 +116,49 @@ export function mergeArchiveEntries(current: UniverseArchiveEntry[], imported: U
   return sortArchiveEntries([...merged.values()]);
 }
 
+export function mergeArchiveEntriesPreservingLocalChanges(
+  baseline: UniverseArchiveEntry[],
+  current: UniverseArchiveEntry[],
+  imported: UniverseArchiveEntry[],
+): { entries: UniverseArchiveEntry[]; added: number; updated: number; preservedLocalChanges: number } {
+  const baselineById = new Map(baseline.map((entry) => [entry.id, entry]));
+  const currentById = new Map(current.map((entry) => [entry.id, entry]));
+  const merged = new Map(currentById);
+  let added = 0;
+  let updated = 0;
+  let preservedLocalChanges = 0;
+
+  for (const importedEntry of imported) {
+    const baselineEntry = baselineById.get(importedEntry.id);
+    const currentEntry = currentById.get(importedEntry.id);
+    if (!baselineEntry) {
+      if (currentEntry) {
+        if (!sameArchiveEntry(currentEntry, importedEntry)) preservedLocalChanges += 1;
+      } else {
+        merged.set(importedEntry.id, importedEntry);
+        added += 1;
+      }
+      continue;
+    }
+    if (!currentEntry || !sameArchiveEntry(currentEntry, baselineEntry)) {
+      preservedLocalChanges += 1;
+      continue;
+    }
+    merged.set(importedEntry.id, importedEntry);
+    if (!sameArchiveEntry(currentEntry, importedEntry)) updated += 1;
+  }
+
+  if (merged.size > ARCHIVE_LIMIT) throw new ArchiveError(`合并后条目超过 ${ARCHIVE_LIMIT} 条上限。`);
+  return { entries: sortArchiveEntries([...merged.values()]), added, updated, preservedLocalChanges };
+}
+
 export function sortArchiveEntries(entries: UniverseArchiveEntry[]): UniverseArchiveEntry[] {
   return [...entries].sort((left, right) => Number(right.favorite) - Number(left.favorite)
     || right.updatedAt.localeCompare(left.updatedAt)
     || left.title.localeCompare(right.title, "zh-CN"));
 }
 
-function validateEntry(value: unknown, index: number): UniverseArchiveEntry {
+function validateEntry(value: unknown, index: number, verifyGeneration: boolean): UniverseArchiveEntry {
   if (!isRecord(value)) throw new ArchiveError(`第 ${index + 1} 条存档不是对象。`);
   const strings = ["id", "title", "seed", "displaySeed", "templateId", "rulesetVersion", "shareCode", "createdAt", "updatedAt"] as const;
   for (const field of strings) {
@@ -118,6 +171,21 @@ function validateEntry(value: unknown, index: number): UniverseArchiveEntry {
   const shareCode = value.shareCode as string;
   const decoded = decodeShareCode(shareCode);
   if (!decoded || decoded.warnings.length > 0 || decoded.rulesetVersion !== RULESET_VERSION) throw new ArchiveError(`第 ${index + 1} 条存档的分享码无效或不受支持。`);
+  if (shareCode !== value.id
+    || value.seed !== decoded.seed
+    || value.displaySeed !== formatSeed(decoded.seed)
+    || value.templateId !== decoded.templateId
+    || value.rulesetVersion !== decoded.rulesetVersion) {
+    throw new ArchiveError(`第 ${index + 1} 条存档与分享码内容不一致。`);
+  }
+  const entry = value as UniverseArchiveEntry;
+  if (verifyGeneration) verifyRestorableEntry(entry, index);
+  return entry;
+}
+
+function verifyRestorableEntry(entry: UniverseArchiveEntry, index: number): void {
+  const decoded = decodeShareCode(entry.shareCode);
+  if (!decoded) throw new ArchiveError(`第 ${index + 1} 条存档的分享码无效或不受支持。`);
   let restored: UniverseSummary;
   try {
     assertGenerateUniverseInput(decoded);
@@ -125,15 +193,13 @@ function validateEntry(value: unknown, index: number): UniverseArchiveEntry {
   } catch {
     throw new ArchiveError(`第 ${index + 1} 条存档的分享分支无法生成。`);
   }
-  if (shareCode !== restored.shareCode
-    || value.id !== restored.shareCode
-    || value.seed !== restored.seed
-    || value.displaySeed !== restored.displaySeed
-    || value.templateId !== restored.templateId
-    || value.rulesetVersion !== restored.rulesetVersion) {
+  if (entry.shareCode !== restored.shareCode || entry.id !== restored.shareCode) {
     throw new ArchiveError(`第 ${index + 1} 条存档与分享码内容不一致。`);
   }
-  return value as UniverseArchiveEntry;
+}
+
+function yieldToBrowser(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 function normalizeTitle(title: string, fallback: string): string {
@@ -148,6 +214,10 @@ function fieldLimit(field: string): number {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function sameArchiveEntry(left: UniverseArchiveEntry, right: UniverseArchiveEntry): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 function isIsoDate(value: unknown): value is string {

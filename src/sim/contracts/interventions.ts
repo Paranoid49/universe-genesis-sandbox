@@ -1,4 +1,4 @@
-import type { EventType, MetricId, TimelineEvent } from "../types";
+import type { EraId, EventType, MetricId } from "./foundations";
 
 export type CreatorMode = "observer" | "miracle";
 
@@ -21,6 +21,23 @@ export type EventEffect = {
   description: string;
   influence: "metric" | "probability" | "law-pressure";
   affectsFuture: boolean;
+};
+
+export type TimelineEvent = {
+  id: string;
+  age: number;
+  ageLabel: string;
+  era: EraId;
+  type: EventType;
+  title: string;
+  description: string;
+  causes: string[];
+  effects: EventEffect[];
+  importance: number;
+  location: string;
+  sourceIds: string[];
+  triggeredByEventIds: string[];
+  causalNotes: string[];
 };
 
 export type MiracleCost = {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateUniverse, RULESET_VERSION } from "../src/sim";
-import { buildObservationProjection, observationOverlayOptions } from "../src/ui/observationProjection";
+import { buildObservationProjection, observationHaloRadius, observationOverlayOptions } from "../src/ui/observationProjection";
 
 describe("阶段 7：可视化宇宙观察台", () => {
   const universe = generateUniverse({ seed: "PHASE-7-OBSERVE", rulesetVersion: RULESET_VERSION, templateId: "high_magic" });
@@ -27,6 +27,34 @@ describe("阶段 7：可视化宇宙观察台", () => {
       expect(Object.keys(node.intensity).sort()).toEqual(observationOverlayOptions.map((item) => item.id).sort());
       expect(Object.values(node.intensity).every((value) => value >= 0 && value <= 100)).toBe(true);
     }
+  });
+
+  it("宇宙层节点保持可辨识间距且详情不暴露内部枚举", () => {
+    const expanded = structuredClone(universe);
+    expanded.galaxies = Array.from({ length: 48 }, (_, index) => ({
+      ...structuredClone(universe.galaxies[index % universe.galaxies.length]),
+      id: `dense-galaxy-${index}`,
+      name: `密集星系 ${index}`,
+    }));
+    const denseGalaxy = expanded.galaxies[0];
+    denseGalaxy.starSystems = Array.from({ length: 64 }, (_, index) => ({
+      ...structuredClone(universe.galaxies[0].starSystems[index % universe.galaxies[0].starSystems.length]),
+      id: `dense-system-${index}`,
+      name: `密集恒星系 ${index}`,
+    }));
+    const denseSystem = denseGalaxy.starSystems[0];
+    denseSystem.planets = Array.from({ length: 32 }, (_, index) => ({
+      ...structuredClone(universe.galaxies[0].starSystems[0].planets[index % universe.galaxies[0].starSystems[0].planets.length]),
+      id: `dense-planet-${index}`,
+      name: `密集行星 ${index}`,
+    }));
+    const projections = [
+      buildObservationProjection(expanded, "universe"),
+      buildObservationProjection(expanded, "galaxy", denseGalaxy.id),
+      buildObservationProjection(expanded, "system", denseGalaxy.id, denseSystem.id),
+    ];
+    projections.forEach(assertProjectionHasNoHaloCollisions);
+    expect(projections.flatMap((projection) => projection.nodes).every((node) => !node.detail.includes("_") && !node.detail.includes("arcane_cluster"))).toBe(true);
   });
 
   it("按规格字段映射亮度、尺寸与五类叠层语义", () => {
@@ -116,3 +144,16 @@ describe("阶段 7：可视化宇宙观察台", () => {
     expect(JSON.stringify(universe)).toBe(before);
   });
 });
+
+function assertProjectionHasNoHaloCollisions(projection: ReturnType<typeof buildObservationProjection>): void {
+  for (let leftIndex = 0; leftIndex < projection.nodes.length; leftIndex += 1) {
+    for (let rightIndex = leftIndex + 1; rightIndex < projection.nodes.length; rightIndex += 1) {
+      const left = projection.nodes[leftIndex];
+      const right = projection.nodes[rightIndex];
+      const distance = Math.hypot(left.x - right.x, left.y - right.y);
+      for (const overlay of observationOverlayOptions) {
+        expect(distance).toBeGreaterThan(observationHaloRadius(left, overlay.id) + observationHaloRadius(right, overlay.id));
+      }
+    }
+  }
+}

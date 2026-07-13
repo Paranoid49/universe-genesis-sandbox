@@ -63,6 +63,13 @@ describe("阶段 5 文明演化与神话生成", () => {
     expect(fates.size).toBeGreaterThanOrEqual(5);
   });
 
+  it("代表性高魔宇宙不会把全部文明压缩为单一路径", () => {
+    const universe = generateUniverse({ rulesetVersion: RULESET_VERSION, seed: fixedSeeds[0], templateId: "high_magic" });
+    const paths = new Set(universe.civilizations.map((civilization) => civilization.path));
+    expect(paths.size).toBeGreaterThanOrEqual(2);
+    expect(universe.civilizations.some((civilization) => civilization.path !== "lost")).toBe(true);
+  });
+
   it("页面提供文明演化、文明详情、神话系统和文明历史入口", () => {
     const markup = renderToStaticMarkup(createElement<AppProps>(App, { initialPage: "civilizations" }));
 

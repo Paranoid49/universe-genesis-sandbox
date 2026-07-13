@@ -40,8 +40,20 @@ test("桌面页面通过真实浏览器无障碍扫描", async ({ page }) => {
 test("移动视口没有横向溢出且核心导航可操作", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  expect(overflow).toBeLessThanOrEqual(1);
+  const layout = await page.evaluate(() => {
+    const navigation = document.querySelector<HTMLElement>(".page-navigation");
+    const overview = document.querySelector<HTMLElement>("[aria-label='创世总览']");
+    return {
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      navigationHeight: navigation?.getBoundingClientRect().height ?? Number.POSITIVE_INFINITY,
+      navigationScrollable: Boolean(navigation && navigation.scrollWidth > navigation.clientWidth),
+      overviewTop: overview?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY,
+    };
+  });
+  expect(layout.overflow).toBeLessThanOrEqual(1);
+  expect(layout.navigationHeight).toBeLessThan(100);
+  expect(layout.navigationScrollable).toBe(true);
+  expect(layout.overviewTop).toBeLessThan(400);
   await page.getByTitle("星系、恒星系与行星").click();
   await expect(page.getByRole("heading", { name: "局部探索" })).toBeVisible();
 });

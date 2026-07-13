@@ -50,6 +50,34 @@ describe("架构边界门禁", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("模拟核心内部不存在导入循环", () => {
+    const simFiles = files.filter(isSimFile);
+    const graph = new Map(simFiles.map((file) => [normalize(file), importedModules(parseSourceFile(file))
+      .filter((moduleName) => moduleName.startsWith("."))
+      .map((moduleName) => resolveModuleFile(file, moduleName, simFiles))
+      .filter((target): target is string => Boolean(target))]));
+    const cycles: string[][] = [];
+    const visited = new Set<string>();
+    const active = new Set<string>();
+    const stack: string[] = [];
+    const visit = (file: string) => {
+      if (active.has(file)) {
+        const start = stack.indexOf(file);
+        cycles.push([...stack.slice(start), file].map((item) => relative(sourceRoot, item)));
+        return;
+      }
+      if (visited.has(file)) return;
+      visited.add(file);
+      active.add(file);
+      stack.push(file);
+      graph.get(file)?.forEach(visit);
+      stack.pop();
+      active.delete(file);
+    };
+    simFiles.map(normalize).forEach(visit);
+    expect(cycles).toEqual([]);
+  });
+
   it("浏览器本地存储只允许由存档适配器访问", () => {
     const offenders = files.filter((file) => {
       const accessesStorage = descendants(parseSourceFile(file)).some((node) => ts.isPropertyAccessExpression(node)
@@ -62,9 +90,12 @@ describe("架构边界门禁", () => {
 
   it("关键编排文件保持在约定规模内", () => {
     const limits = new Map([
-      ["src/App.tsx", 340],
+      ["src/App.tsx", 140],
       ["src/components/AppChrome.tsx", 120],
-      ["src/ui/useUniverseAppModel.ts", 260],
+      ["src/ui/useUniverseAppModel.ts", 230],
+      ["src/components/pages/OverviewPage.tsx", 120],
+      ["src/components/pages/TimelinePage.tsx", 100],
+      ["src/components/pages/LawsPage.tsx", 120],
       ["src/sim/timeline.ts", 320],
       ["src/sim/civilizations.ts", 390],
       ["src/sim/interventions.ts", 410],
@@ -76,6 +107,16 @@ describe("架构边界门禁", () => {
       const lines = readFileSync(file, "utf8").split(/\r?\n/).length;
       expect(lines, `${relativePath} 超过 ${limit} 行，应继续拆分职责。`).toBeLessThanOrEqual(limit);
       expect(statSync(file).size).toBeGreaterThan(0);
+    }
+    const styleLimits = new Map([
+      ["src/styles.css", 700],
+      ["src/styles-simulation.css", 760],
+      ["src/styles-features.css", 420],
+      ["src/styles-responsive.css", 220],
+    ]);
+    for (const [relativePath, limit] of styleLimits) {
+      const file = pathFromTest(import.meta.url, `../${relativePath}`);
+      expect(readFileSync(file, "utf8").split(/\r?\n/).length, `${relativePath} 超过 ${limit} 行，应按功能继续拆分。`).toBeLessThanOrEqual(limit);
     }
   });
 });
@@ -91,6 +132,14 @@ function importedModules(sourceFile: ts.SourceFile): string[] {
     }
     return [];
   });
+}
+
+function resolveModuleFile(file: string, moduleName: string, candidates: string[]): string | undefined {
+  const base = resolve(dirname(file), moduleName);
+  return candidates.map(normalize).find((candidate) => candidate === normalize(base)
+    || candidate === normalize(`${base}.ts`)
+    || candidate === normalize(`${base}.tsx`)
+    || candidate === normalize(resolve(base, "index.ts")));
 }
 
 function resolvesInto(file: string, moduleName: string, segments: string[]): boolean {

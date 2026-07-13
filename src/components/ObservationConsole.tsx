@@ -1,13 +1,15 @@
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Radar } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Radar } from "./icons";
 import { useMemo, useState } from "react";
 import type { UniverseSummary } from "../sim";
 import {
   buildObservationProjection,
+  observationHaloRadius,
   observationOverlayOptions,
   type ObservationLevel,
   type ObservationNode,
   type ObservationOverlay,
 } from "../ui/observationProjection";
+import { eraName } from "../ui/labels";
 import { SectionHeader } from "./common";
 
 export function ObservationConsole({ universe }: { universe: UniverseSummary }) {
@@ -74,7 +76,6 @@ export function ObservationConsole({ universe }: { universe: UniverseSummary }) 
           </div>
           <svg className="star-map" viewBox="0 0 100 100" role="img" aria-label={`${projection.title}，${projection.nodes.length} 个节点`}>
             <title>{projection.title}</title>
-            {level === "system" && <OrbitGuide count={projection.nodes.length} />}
             {projection.nodes.map((node) => {
               const intensity = node.intensity[overlay];
               const active = selectedNode?.id === node.id;
@@ -96,7 +97,7 @@ export function ObservationConsole({ universe }: { universe: UniverseSummary }) 
                     }
                   }}
                 >
-                  <circle className="node-halo" r={node.size + 2 + intensity / 18} opacity={0.12 + intensity / 130} />
+                  <circle className="node-halo" r={observationHaloRadius(node, overlay)} opacity={0.12 + intensity / 130} />
                   <circle className="node-core" r={node.size} opacity={0.35 + node.brightness / 155} />
                   <text y={node.size + 5} textAnchor="middle">{shortLabel(node.label)}</text>
                 </g>
@@ -133,19 +134,13 @@ export function ObservationConsole({ universe }: { universe: UniverseSummary }) 
         </div>
         {currentEvent && <article>
           <span>{currentEvent.ageLabel}</span><strong>{currentEvent.title}</strong><p>{currentEvent.description}</p>
-          <small>{currentEvent.era} · {currentEvent.location}</small>
+          <small>{eraName(currentEvent.era)} · {currentEvent.location}</small>
           <small>关联来源：{currentEvent.sourceIds.length > 0 ? currentEvent.sourceIds.join("、") : "无显式来源"}</small>
           <small>当前层级关联节点：{relatedNodeLabels(projection.nodes, currentEvent.id)}</small>
         </article>}
       </section>
     </section>
   );
-}
-
-function OrbitGuide({ count }: { count: number }) {
-  return <g className="orbit-guides" aria-hidden="true">{Array.from({ length: count }, (_, index) => (
-    <circle key={index} cx="50" cy="50" r={count <= 1 ? 12 : 12 + index * (24 / (count - 1))} />
-  ))}</g>;
 }
 
 function shortLabel(label: string): string {

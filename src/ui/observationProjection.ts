@@ -1,4 +1,5 @@
 import type { Civilization, Galaxy, Planet, StarSystem, UniverseSummary } from "../sim";
+import { galaxyTypeName, orbitZoneName, planetTypeName, starSystemTypeName } from "./labels";
 
 export type ObservationLevel = "universe" | "galaxy" | "system";
 export type ObservationOverlay = "life" | "civilization" | "magic" | "divinity" | "causality";
@@ -34,6 +35,10 @@ export const observationOverlayOptions: Array<{ id: ObservationOverlay; label: s
   { id: "causality", label: "因果", description: "因果危险、异常与完整度风险" },
 ];
 
+export function observationHaloRadius(node: ObservationNode, overlay: ObservationOverlay): number {
+  return node.size + 1.5 + node.intensity[overlay] / 35;
+}
+
 export function buildObservationProjection(
   universe: UniverseSummary,
   level: ObservationLevel,
@@ -52,7 +57,7 @@ export function buildObservationProjection(
 
 function universeProjection(universe: UniverseSummary): ObservationProjection {
   const limit = 48;
-  const nodes = universe.galaxies.slice(0, limit).map((galaxy) => galaxyNode(universe, galaxy));
+  const nodes = distributeNodes(universe.galaxies.slice(0, limit).map((galaxy) => galaxyNode(universe, galaxy)));
   return {
     level: "universe",
     title: `${universe.name} · 宇宙层`,
@@ -64,7 +69,7 @@ function universeProjection(universe: UniverseSummary): ObservationProjection {
 
 function galaxyProjection(universe: UniverseSummary, galaxy: Galaxy): ObservationProjection {
   const limit = 64;
-  const nodes = galaxy.starSystems.slice(0, limit).map((system) => systemNode(universe, galaxy, system));
+  const nodes = distributeNodes(galaxy.starSystems.slice(0, limit).map((system) => systemNode(universe, galaxy, system)));
   return {
     level: "galaxy",
     title: `${galaxy.name} · 星系层`,
@@ -79,7 +84,7 @@ function galaxyProjection(universe: UniverseSummary, galaxy: Galaxy): Observatio
 
 function systemProjection(universe: UniverseSummary, galaxy: Galaxy, system: StarSystem): ObservationProjection {
   const limit = 32;
-  const nodes = system.planets.slice(0, limit).map((planet, index) => planetNode(universe, galaxy, system, planet, index));
+  const nodes = distributeNodes(system.planets.slice(0, limit).map((planet) => planetNode(universe, galaxy, system, planet)));
   return {
     level: "system",
     title: `${system.name} · 恒星系层`,
@@ -96,39 +101,35 @@ function systemProjection(universe: UniverseSummary, galaxy: Galaxy, system: Sta
 function galaxyNode(universe: UniverseSummary, galaxy: Galaxy): ObservationNode {
   const civilizations = universe.civilizations.filter((item) => item.originGalaxyId === galaxy.id);
   const planets = galaxy.starSystems.flatMap((system) => system.planets);
-  return createNode(galaxy.id, undefined, "galaxy", galaxy.name, `${galaxy.type} · ${galaxy.starSystems.length} 个恒星系`, galaxy.mass, galaxy.metallicity, {
+  return createNode(galaxy.id, undefined, "galaxy", galaxy.name, `${galaxyTypeName(galaxy.type)} · ${galaxy.starSystems.length} 个恒星系`, galaxy.mass, galaxy.metallicity, {
     life: clamp(average(planets.map((planet) => lifeValue(planet))) * 0.75 + universe.metrics.lifePotential.value * 0.25),
     civilization: civilizationValue(civilizations),
     magic: clamp(galaxy.magicFlux * 0.65 + average(civilizations.map((item) => item.magicLevel)) * 0.35),
     divinity: clamp(galaxy.divineResidue * 0.55 + average(civilizations.map(divinityValue)) * 0.45),
     causality: causalityValue(universe, galaxy.causalHazard),
-  }, universe, collectGalaxySources(galaxy, civilizations));
+  }, universe, galaxy.sourceEventIds);
 }
 
 function systemNode(universe: UniverseSummary, galaxy: Galaxy, system: StarSystem): ObservationNode {
   const civilizations = universe.civilizations.filter((item) => item.originStarSystemId === system.id);
-  return createNode(system.id, galaxy.id, "system", system.name, `${system.starClass} · ${system.planets.length} 颗行星`, system.luminosity, system.stability, {
+  return createNode(system.id, galaxy.id, "system", system.name, `${starSystemTypeName(system.type)} · ${system.starClass} · ${system.planets.length} 颗行星`, system.luminosity, system.stability, {
     life: clamp(average(system.planets.map((planet) => lifeValue(planet))) * 0.75 + universe.metrics.lifePotential.value * 0.25),
     civilization: civilizationValue(civilizations),
     magic: clamp(galaxy.magicFlux * 0.25 + average(system.planets.map((planet) => planet.magicSaturation)) * 0.45 + average(civilizations.map((item) => item.magicLevel)) * 0.3),
     divinity: clamp(galaxy.divineResidue * 0.4 + average(civilizations.map(divinityValue)) * 0.6),
     causality: causalityValue(universe, galaxy.causalHazard * 0.45 + system.anomalyLevel * 0.55),
-  }, universe, collectSystemSources(system, civilizations));
+  }, universe, system.sourceEventIds);
 }
 
-function planetNode(universe: UniverseSummary, galaxy: Galaxy, system: StarSystem, planet: Planet, index: number): ObservationNode {
+function planetNode(universe: UniverseSummary, galaxy: Galaxy, system: StarSystem, planet: Planet): ObservationNode {
   const civilizations = universe.civilizations.filter((item) => item.originPlanetId === planet.id);
-  const node = createNode(planet.id, system.id, "planet", planet.name, `${planet.type} · ${planet.orbitZone} 轨道`, clamp(planet.habitability * 0.7 + planetTypeSize(planet) * 0.3), planet.stability, {
+  return createNode(planet.id, system.id, "planet", planet.name, `${planetTypeName(planet.type)} · ${orbitZoneName(planet.orbitZone)}轨道`, clamp(planet.habitability * 0.7 + planetTypeSize(planet) * 0.3), planet.stability, {
     life: clamp(lifeValue(planet) * 0.75 + universe.metrics.lifePotential.value * 0.25),
     civilization: civilizationValue(civilizations),
     magic: clamp(planet.magicSaturation * 0.65 + average(civilizations.map((item) => item.magicLevel)) * 0.35),
     divinity: clamp(galaxy.divineResidue * 0.25 + average(civilizations.map(divinityValue)) * 0.75),
     causality: causalityValue(universe, galaxy.causalHazard * 0.35 + system.anomalyLevel * 0.4 + (100 - planet.stability) * 0.25),
-  }, universe, collectPlanetSources(planet, civilizations));
-  const count = planetCount(system);
-  const angle = (index / Math.max(count, 1)) * Math.PI * 2 - Math.PI / 2;
-  const radius = count <= 1 ? 12 : 12 + index * (24 / (count - 1));
-  return { ...node, x: 50 + Math.cos(angle) * radius, y: 50 + Math.sin(angle) * radius };
+  }, universe, planet.sourceEventIds);
 }
 
 function createNode(
@@ -143,8 +144,8 @@ function createNode(
   universe: UniverseSummary,
   sourceIds: string[],
 ): ObservationNode {
-  const x = 8 + stableFraction(`${id}:x`) * 84;
-  const y = 9 + stableFraction(`${id}:y`) * 82;
+  const x = 10 + stableFraction(`${id}:x`) * 80;
+  const y = 10 + stableFraction(`${id}:y`) * 80;
   return {
     id,
     parentId,
@@ -153,12 +154,11 @@ function createNode(
     detail,
     x,
     y,
-    size: 5 + clamp(sizeSource) / 13,
+    size: 3.2 + clamp(sizeSource) / 36,
     brightness: clamp(brightnessSource),
     intensity: mapIntensity(intensity),
     relatedEventIds: universe.timeline.filter((event) => sourceIds.includes(event.id)
       || event.sourceIds.includes(id)
-      || event.sourceIds.some((sourceId) => sourceIds.includes(sourceId))
       || event.location.includes(label)).map((event) => event.id),
   };
 }
@@ -177,21 +177,6 @@ function divinityValue(civilization: Civilization): number {
 
 function causalityValue(universe: UniverseSummary, localRisk: number): number {
   return clamp(localRisk * 0.7 + (100 - universe.metrics.causalityIntegrity.value) * 0.3);
-}
-
-function collectGalaxySources(galaxy: Galaxy, civilizations: Civilization[]): string[] {
-  return [...galaxy.sourceEventIds, ...galaxy.sourceRuleIds,
-    ...galaxy.starSystems.flatMap((system) => collectSystemSources(system, civilizations.filter((item) => item.originStarSystemId === system.id)))];
-}
-
-function collectSystemSources(system: StarSystem, civilizations: Civilization[]): string[] {
-  return [...system.sourceEventIds, ...system.sourceRuleIds,
-    ...system.planets.flatMap((planet) => collectPlanetSources(planet, civilizations.filter((item) => item.originPlanetId === planet.id)))];
-}
-
-function collectPlanetSources(planet: Planet, civilizations: Civilization[]): string[] {
-  return [...planet.sourceEventIds, ...planet.sourceRuleIds,
-    ...civilizations.flatMap((item) => [...item.sourceEventIds, ...item.sourceRuleIds, ...item.historyEvents.map((event) => event.id)])];
 }
 
 function planetTypeSize(planet: Planet): number {
@@ -215,16 +200,38 @@ function stableFraction(value: string): number {
   return (hash >>> 0) / 4294967295;
 }
 
+function distributeNodes(nodes: ObservationNode[]): ObservationNode[] {
+  if (nodes.length <= 1) return nodes.map((node) => ({ ...node, x: 50, y: 50 }));
+  const columns = Math.ceil(Math.sqrt(nodes.length));
+  const rows = Math.ceil(nodes.length / columns);
+  const horizontalStep = columns <= 1 ? 0 : 76 / (columns - 1);
+  const verticalStep = rows <= 1 ? 0 : 72 / (rows - 1);
+  const minimumStep = Math.min(
+    horizontalStep || Number.POSITIVE_INFINITY,
+    verticalStep || Number.POSITIVE_INFINITY,
+  );
+  return nodes.map((node, index) => {
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    const rowLength = Math.min(columns, nodes.length - row * columns);
+    const rowOffset = (columns - rowLength) * horizontalStep / 2;
+    const maximumHaloExpansion = 1.5 + Math.max(...Object.values(node.intensity)) / 35;
+    const maximumCoreRadius = Math.max(0.35, minimumStep / 2 - maximumHaloExpansion - 0.45);
+    return {
+      ...node,
+      size: Math.min(node.size, maximumCoreRadius),
+      x: columns <= 1 ? 50 : 12 + column * horizontalStep + rowOffset,
+      y: rows <= 1 ? 50 : 14 + row * verticalStep,
+    };
+  });
+}
+
 function average(values: number[]): number {
   return values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
 function clamp(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
-}
-
-function planetCount(system: StarSystem): number {
-  return system.planets.length;
 }
 
 function projectionSummary(total: number, visible: number, unit: string, action: string): string {

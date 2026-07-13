@@ -58,7 +58,7 @@ npm run check
 - 阶段 7：完成轻量二维宇宙观察台、宇宙/星系/恒星系三级投影、五类信息叠层、逐事件时间浏览、键盘节点操作和文字降级路径。
 - 阶段 8：完成 A1 本地存档、收藏优先图书馆、组合搜索、确定性恢复、版本化 JSON 导入导出和存储失败原子性处理。
 
-当前规则版本：`ugs-ruleset@0.6.2`，分享短码：`UGS062`，干预分享载荷版本为 `I1`。
+当前规则版本：`ugs-ruleset@0.6.3`，分享短码：`UGS063`，干预分享载荷版本为 `I1`。
 
 阶段 7 只读消费既有结构化宇宙，阶段 8 只在 UI 基础设施层读写本地存档；二者都不改变规则版本或模拟核心的确定性结果。
 
@@ -74,6 +74,7 @@ npm run check
 - [阶段 7：可视化宇宙观察台](docs/phase-7.md)
 - [阶段 8：本地存档、分享与宇宙图书馆](docs/phase-8.md)
 - [架构说明](docs/architecture.md)
+- [架构问题分级与修复记录](docs/architecture-review.md)
 - [项目演进里程碑](docs/milestones.md)
 - [仓库就绪检查](docs/repository-readiness.md)
 - [质量门禁](docs/quality-gates.md)

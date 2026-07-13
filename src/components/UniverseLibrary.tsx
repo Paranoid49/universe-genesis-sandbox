@@ -1,11 +1,10 @@
-import { BookMarked, Download, RotateCcw, Search, Star, Trash2, Upload } from "lucide-react";
+import { BookMarked, Download, RotateCcw, Search, Star, Trash2, Upload } from "./icons";
 import { useState } from "react";
 import type { UniverseSummary } from "../sim";
-import { useUniverseArchive } from "../ui/useUniverseArchive";
+import type { UniverseArchiveController } from "../ui/useUniverseArchive";
 import { SectionHeader } from "./common";
 
-export function UniverseLibrary({ universe, onRestore }: { universe: UniverseSummary; onRestore: (shareCode: string) => string | undefined }) {
-  const archive = useUniverseArchive();
+export function UniverseLibrary({ universe, archive, onRestore }: { universe: UniverseSummary; archive: UniverseArchiveController; onRestore: (shareCode: string) => string | undefined }) {
   const [title, setTitle] = useState(universe.name);
   const [importText, setImportText] = useState("");
   const [restoreError, setRestoreError] = useState<string>();
@@ -46,7 +45,7 @@ export function UniverseLibrary({ universe, onRestore }: { universe: UniverseSum
       </div>
       <section className="library-transfer" aria-label="导入导出存档">
         <div><h3><Download size={16} />导出</h3><button type="button" onClick={archive.exportAll}>生成导出 JSON</button><textarea aria-label="导出 JSON" readOnly value={archive.exportText} placeholder="点击生成导出 JSON" /></div>
-        <div><h3><Upload size={16} />导入</h3><button type="button" onClick={() => archive.importAll(importText)}>导入 JSON</button><textarea aria-label="导入 JSON" value={importText} onChange={(event) => setImportText(event.target.value)} placeholder="粘贴 A1 存档 JSON" /></div>
+        <div><h3><Upload size={16} />导入</h3><button type="button" disabled={archive.importing} onClick={() => archive.importAll(importText)}>{archive.importing ? "正在校验导入" : "导入 JSON"}</button><textarea aria-label="导入 JSON" value={importText} onChange={(event) => setImportText(event.target.value)} placeholder="粘贴 A1 存档 JSON" /></div>
       </section>
     </section>
   );

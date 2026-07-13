@@ -1,0 +1,171 @@
+@media (max-width: 1180px) {
+  .topbar,
+  .overview-band {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .topbar {
+    display: grid;
+  }
+
+  .tool-strip {
+    justify-content: start;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-navigation,
+  .overview-snapshot {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .space-grid,
+  .space-stats,
+  .civilization-grid,
+  .civilization-stats,
+  .miracle-grid,
+  .miracle-stats,
+  .observation-layout,
+  .library-list,
+  .library-transfer {
+    grid-template-columns: 1fr;
+  }
+
+  .space-list,
+  .space-detail,
+  .civilization-list,
+  .civilization-detail,
+  .civilization-history,
+  .miracle-controls,
+  .miracle-summary,
+  .intervention-log {
+    min-height: unset;
+  }
+
+  .space-list > div,
+  .civilization-list > .civilization-results,
+  .civilization-history > div {
+    max-height: 280px;
+  }
+
+  .metrics-panel,
+  .timeline-panel,
+  .laws-panel {
+    min-height: unset;
+  }
+
+  .law-list {
+    max-height: unset;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    width: min(100vw - 18px, 680px);
+    padding-top: 10px;
+  }
+
+  .share-panel,
+  .miracle-actions,
+  .compare-controls,
+  .detail-columns,
+  .event-causality,
+  .detail-metrics,
+  .phase4-bias-grid,
+  .source-grid,
+  .log-band,
+  .observation-toolbar,
+  .observation-heading,
+  .timeline-playback-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .library-save,
+  .library-filters {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .overview-snapshot {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .topbar {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .brand-block {
+    min-width: 0;
+  }
+
+  .tool-strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .tool-strip .input-error {
+    grid-column: 1 / -1;
+  }
+
+  .page-navigation {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 8px;
+    scroll-snap-type: x proximity;
+  }
+
+  .page-navigation button {
+    flex: 0 0 96px;
+    width: 96px;
+    min-height: 48px;
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "icon label";
+    scroll-snap-align: start;
+  }
+
+  .page-navigation small {
+    display: none;
+  }
+
+  input,
+  select,
+  button,
+  .share-panel a {
+    width: 100%;
+  }
+
+  .page-navigation button {
+    width: 96px;
+  }
+
+  .overview-band {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .timeline-event {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .observation-node-list {
+    grid-template-columns: 1fr;
+  }
+
+  .civilization-filters,
+  .civilization-pagination {
+    grid-template-columns: 1fr;
+  }
+
+  .star-map {
+    min-height: 280px;
+  }
+}

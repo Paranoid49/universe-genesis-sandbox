@@ -36,7 +36,7 @@
 
 | 要求 | 状态 | 证据 |
 | --- | --- | --- |
-| 规则版本已显式绑定 | 通过 | 当前规则版本为 `ugs-ruleset@0.6.2`，分享短码为 `UGS062`，生成输入必须显式携带并匹配规则版本。 |
+| 规则版本已显式绑定 | 通过 | 当前规则版本为 `ugs-ruleset@0.6.3`，分享短码为 `UGS063`，生成输入必须显式携带并匹配规则版本。 |
 | seed 确定性生成 | 通过 | 同一 `seed + templateId + rulesetVersion` 由确定性 PRNG 生成，阶段测试覆盖固定 seed 复现性。 |
 | 干预确定性生成 | 通过 | 同一 `seed + templateId + rulesetVersion + InterventionInput[]` 可复现同一干预后宇宙。 |
 | 模拟核心不直接使用 `Math.random()` | 通过 | 自动化测试扫描 `src/sim/**`，禁止核心模拟直接使用不可控随机源。 |

@@ -4,8 +4,12 @@ import { axe } from "jest-axe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../src/App";
 import { AppErrorBoundary } from "../../src/components/AppErrorBoundary";
-import { generateUniverse, RULESET_VERSION } from "../../src/sim";
+import { SpaceExplorer } from "../../src/components/SpaceExplorer";
+import { generateUniverse, RULESET_VERSION, type MiracleType } from "../../src/sim";
+import { buildMiracleTargetOptions } from "../../src/ui/miracleTargets";
 import { buildObservationProjection } from "../../src/ui/observationProjection";
+import { buildSourceLabelMap, summarizeSpace } from "../../src/ui/selectors";
+import { saveUniverseEntry, serializeArchive, type UniverseArchiveEntry } from "../../src/ui/archive";
 
 describe("应用关键交互", () => {
   beforeEach(() => window.localStorage.clear());
@@ -15,9 +19,73 @@ describe("应用关键交互", () => {
 
     await user.click(screen.getByRole("button", { name: /星系、恒星系与行星/ }));
     expect(screen.getByRole("heading", { name: "局部探索" })).toBeTruthy();
+    const galaxyChoices = document.querySelectorAll(".space-grid > .space-list:first-child .space-select");
+    await user.click(galaxyChoices[Math.min(1, galaxyChoices.length - 1)] as HTMLElement);
+    const systemChoices = document.querySelectorAll(".space-grid > .space-list:nth-child(2) > div:not(.planet-select-list) .space-select");
+    await user.click(systemChoices[Math.min(1, systemChoices.length - 1)] as HTMLElement);
+    const planetChoices = document.querySelectorAll(".planet-select-list .space-select");
+    await user.click(planetChoices[Math.min(1, planetChoices.length - 1)] as HTMLElement);
 
     await user.click(screen.getByRole("button", { name: /文明演化与神话/ }));
     expect(screen.getByRole("heading", { name: "文明演化" })).toBeTruthy();
+    const civilizationChoices = document.querySelectorAll(".civilization-select");
+    await user.click(civilizationChoices[Math.min(1, civilizationChoices.length - 1)] as HTMLElement);
+  });
+
+  it("概览快捷入口可以进入星系和文明页面", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByTitle("查看代表性星系"));
+    expect(screen.getByRole("heading", { name: "局部探索" })).toBeTruthy();
+    await user.click(screen.getByTitle("宇宙摘要与指标"));
+    await user.click(screen.getByTitle("查看文明演化"));
+    expect(screen.getByRole("heading", { name: "文明演化" })).toBeTruthy();
+  });
+
+  it("局部探索覆盖空状态和三级选择回调", async () => {
+    const user = userEvent.setup();
+    const universe = generateUniverse({ seed: "SPACE-UI-001", rulesetVersion: RULESET_VERSION, templateId: "high_magic" });
+    const galaxy = universe.galaxies[0];
+    const system = galaxy.starSystems[0];
+    const planet = system.planets[0];
+    const onSelectGalaxy = vi.fn();
+    const onSelectSystem = vi.fn();
+    const onSelectPlanet = vi.fn();
+    const empty = render(<SpaceExplorer universe={universe} stats={summarizeSpace(universe)} sourceLabelById={buildSourceLabelMap(universe)} onSelectGalaxy={onSelectGalaxy} onSelectSystem={onSelectSystem} onSelectPlanet={onSelectPlanet} />);
+    expect(empty.container.textContent).toBe("");
+    empty.unmount();
+    render(<SpaceExplorer universe={universe} stats={summarizeSpace(universe)} selectedGalaxy={galaxy} selectedSystem={system} selectedPlanet={planet} sourceLabelById={buildSourceLabelMap(universe)} onSelectGalaxy={onSelectGalaxy} onSelectSystem={onSelectSystem} onSelectPlanet={onSelectPlanet} />);
+    const galaxyButtons = document.querySelectorAll(".space-grid > .space-list:first-child .space-select");
+    const systemButtons = document.querySelectorAll(".space-grid > .space-list:nth-child(2) > div:not(.planet-select-list) .space-select");
+    const planetButtons = document.querySelectorAll(".planet-select-list .space-select");
+    await user.click(galaxyButtons[Math.min(1, galaxyButtons.length - 1)] as HTMLElement);
+    await user.click(systemButtons[Math.min(1, systemButtons.length - 1)] as HTMLElement);
+    await user.click(planetButtons[Math.min(1, planetButtons.length - 1)] as HTMLElement);
+    expect(onSelectGalaxy).toHaveBeenCalledTimes(1);
+    expect(onSelectSystem).toHaveBeenCalledTimes(1);
+    expect(onSelectPlanet).toHaveBeenCalledTimes(1);
+  });
+
+  it("奇迹目标选择覆盖宇宙、恒星系、行星、神话和文明目标", () => {
+    const universe = generateUniverse({ seed: "MIRACLE-TARGETS-001", rulesetVersion: RULESET_VERSION, templateId: "mythic" });
+    expect(buildMiracleTargetOptions(universe, "repair_causality")).toHaveLength(1);
+    expect(buildMiracleTargetOptions(universe, "stabilize_star").every((option) => option.kind === "star_system")).toBe(true);
+    expect(buildMiracleTargetOptions(universe, "bless_planet").every((option) => option.kind === "planet")).toBe(true);
+    expect(buildMiracleTargetOptions(universe, "seal_deity").every((option) => option.kind === "mythology")).toBe(true);
+    expect(buildMiracleTargetOptions(universe, "revive_civilization").every((option) => option.kind === "civilization")).toBe(true);
+    expect(buildMiracleTargetOptions(universe, "unknown" as MiracleType)).toEqual([]);
+  });
+
+  it("观察投影覆盖单节点、双节点和无效层级布局分支", () => {
+    const universe = generateUniverse({ seed: "OBSERVATION-BRANCHES", rulesetVersion: RULESET_VERSION, templateId: "high_magic" });
+    const single = structuredClone(universe);
+    single.galaxies = [single.galaxies[0]];
+    expect(buildObservationProjection(single, "universe").nodes[0]).toMatchObject({ x: 50, y: 50 });
+    const pair = structuredClone(universe);
+    pair.galaxies = pair.galaxies.slice(0, 2);
+    expect(buildObservationProjection(pair, "universe").nodes.every((node) => node.y === 50)).toBe(true);
+    expect(buildObservationProjection(universe, "galaxy", "missing").nodes).toEqual([]);
+    expect(buildObservationProjection(universe, "system", universe.galaxies[0].id, "missing").nodes).toEqual([]);
   });
 
   it("观察台支持层级、叠层和时间浏览", async () => {
@@ -97,6 +165,19 @@ describe("应用关键交互", () => {
     expect(screen.getByRole("textbox", { name: "Seed" }).getAttribute("value")).toBe("LUX-7F3A-91C2");
   });
 
+  it("文明列表对大样本分页并支持搜索与路径筛选", async () => {
+    const user = userEvent.setup();
+    render(<App initialPage="civilizations" />);
+    expect(document.querySelectorAll(".civilization-select").length).toBeLessThanOrEqual(30);
+    expect(screen.getByRole("status").textContent).toContain("每页最多显示 30 个");
+    const search = screen.getByRole("textbox", { name: "搜索文明" });
+    await user.type(search, "不存在的文明");
+    expect(screen.getByText("没有符合当前筛选条件的文明。")).toBeTruthy();
+    await user.clear(search);
+    const pathFilter = screen.getByRole("combobox", { name: "文明路径" });
+    expect((pathFilter as HTMLSelectElement).options.length).toBeGreaterThan(2);
+  });
+
   it("图书馆恢复带干预存档时保持完整分支", async () => {
     const user = userEvent.setup();
     const base = generateUniverse({ seed: "LIBRARY-BRANCH", rulesetVersion: RULESET_VERSION, templateId: "high_magic" });
@@ -126,6 +207,41 @@ describe("应用关键交互", () => {
     await user.click(screen.getByRole("button", { name: "导入 JSON" }));
     expect(screen.getByRole("alert").textContent).toContain("无法解析");
     expect(screen.getAllByText(/LUX-7F3A-91C2/).length).toBeGreaterThan(1);
+  });
+
+  it("异步导入期间保存的新宇宙不会被旧快照覆盖", async () => {
+    const timestamp = "2026-07-13T08:00:00.000Z";
+    const importedEntries = Array.from({ length: 5 }, (_, index) => generateUniverse({
+      seed: `IMPORT-RACE-${index}`,
+      rulesetVersion: RULESET_VERSION,
+      templateId: "high_magic",
+    })).reduce<UniverseArchiveEntry[]>((entries, universe, index) => saveUniverseEntry(entries, universe, `导入宇宙 ${index}`, timestamp), []);
+    render(<App initialPage="library" />);
+    fireEvent.change(screen.getByRole("textbox", { name: "导入 JSON" }), { target: { value: serializeArchive(importedEntries, timestamp) } });
+    fireEvent.click(screen.getByRole("button", { name: "导入 JSON" }));
+    expect(screen.getByRole("button", { name: "正在校验导入" }).hasAttribute("disabled")).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "保存当前宇宙" }));
+    expect(await screen.findByText(/当前共有 6 条/)).toBeTruthy();
+    expect(document.querySelectorAll(".library-list article")).toHaveLength(6);
+  });
+
+  it("异步导入期间同 ID 收藏会优先于外部导入内容", async () => {
+    const timestamp = "2026-07-13T08:00:00.000Z";
+    const defaultUniverse = generateUniverse({ seed: "LUX-7F3A-91C2", rulesetVersion: RULESET_VERSION, templateId: "high_magic" });
+    const importedUniverses = [defaultUniverse, ...Array.from({ length: 4 }, (_, index) => generateUniverse({
+      seed: `IMPORT-CONFLICT-${index}`,
+      rulesetVersion: RULESET_VERSION,
+      templateId: "high_magic",
+    }))];
+    const importedEntries = importedUniverses.reduce<UniverseArchiveEntry[]>((entries, universe, index) => saveUniverseEntry(entries, universe, `外部标题 ${index}`, timestamp), []);
+    render(<App initialPage="library" />);
+    fireEvent.click(screen.getByRole("button", { name: "保存当前宇宙" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "导入 JSON" }), { target: { value: serializeArchive(importedEntries, timestamp) } });
+    fireEvent.click(screen.getByRole("button", { name: "导入 JSON" }));
+    fireEvent.click(screen.getByRole("button", { name: "收藏" }));
+    expect(await screen.findByText(/保留 1 条导入期间的本地变更/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "取消收藏" })).toBeTruthy();
+    expect(screen.getByText(defaultUniverse.name)).toBeTruthy();
   });
 
   it("本地存储写入失败时保留原状态并显示明确错误", async () => {

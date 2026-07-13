@@ -75,7 +75,7 @@ describe("阶段 1 宇宙生成", () => {
   });
 
   it("损坏的干预分享载荷会被忽略并给出提示", () => {
-    const decoded = decodeShareParams("?s=LUX7F3A91C2&t=HM&v=UGS062&iv=1&i=broken");
+    const decoded = decodeShareParams(`?s=LUX7F3A91C2&t=HM&v=${RULESET_SHORT_CODE}&iv=1&i=broken`);
     expect(decoded?.interventions).toEqual([]);
     expect(decoded?.warnings.some((warning) => warning.includes("干预分享数据损坏"))).toBe(true);
   });

@@ -1,4 +1,4 @@
-import { ScrollText, Sparkles } from "lucide-react";
+import { ScrollText, Sparkles } from "./icons";
 import type { MiracleType, UniverseSummary } from "../sim";
 import { metricName, miracleOveruseLevelName, miracleTargetKindName, miracleTypeName, signed } from "../ui/labels";
 import type { MiracleTargetOption } from "../ui/useUniverseAppModel";

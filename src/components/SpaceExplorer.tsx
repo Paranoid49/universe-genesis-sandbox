@@ -1,4 +1,4 @@
-import { Orbit, Sparkles, Sprout, Telescope } from "lucide-react";
+import { Orbit, Sparkles, Sprout, Telescope } from "./icons";
 import type { Galaxy, Planet, StarSystem, UniverseSummary } from "../sim";
 import { biosphereLevelName, civilizationFateName, galaxyTypeName, orbitZoneName, planetTypeName, speciesTypeName, starSystemTypeName } from "../ui/labels";
 import type { SpaceStats } from "../ui/selectors";

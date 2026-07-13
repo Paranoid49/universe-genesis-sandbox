@@ -5,6 +5,7 @@ import {
   ArchiveError,
   filterArchiveEntries,
   mergeArchiveEntries,
+  mergeArchiveEntriesPreservingLocalChanges,
   parseArchive,
   saveUniverseEntry,
   serializeArchive,
@@ -37,6 +38,25 @@ describe("阶段 8：本地存档、分享与宇宙图书馆", () => {
     const parsed = parseArchive(serializeArchive(entries, later));
     expect(parsed.entries).toEqual(entries);
     expect(mergeArchiveEntries([], parsed.entries)).toEqual(entries);
+  });
+
+  it("导入合并保留开始后发生的同 ID 收藏、删除和重存", () => {
+    const baseline = saveUniverseEntry([], first, "导入前标题", earlier);
+    const imported = saveUniverseEntry([], first, "外部导入标题", later);
+    const favored = toggleArchiveFavorite(baseline, first.shareCode, later);
+    expect(mergeArchiveEntriesPreservingLocalChanges(baseline, favored, imported)).toMatchObject({
+      entries: favored,
+      preservedLocalChanges: 1,
+    });
+    expect(mergeArchiveEntriesPreservingLocalChanges(baseline, [], imported)).toMatchObject({
+      entries: [],
+      preservedLocalChanges: 1,
+    });
+    const resaved = saveUniverseEntry(baseline, first, "本地新标题", later);
+    expect(mergeArchiveEntriesPreservingLocalChanges(baseline, resaved, imported)).toMatchObject({
+      entries: resaved,
+      preservedLocalChanges: 1,
+    });
   });
 
   it("恢复载荷仍由当前分享码确定性生成", () => {

@@ -1,4 +1,5 @@
-import type { EventEffect, InterventionInput, MiracleState } from "./contracts/interventions";
+import type { InterventionInput, MiracleState, TimelineEvent } from "./contracts/interventions";
+import type { EraId, EventType, MetricId } from "./contracts/foundations";
 
 export type {
   CreatorMode,
@@ -14,10 +15,13 @@ export type {
   MiracleTargetKind,
   MiracleType,
   TargetMutation,
+  TimelineEvent,
 } from "./contracts/interventions";
 
-export const RULESET_VERSION = "ugs-ruleset@0.6.2";
-export const RULESET_SHORT_CODE = "UGS062";
+export type { EraId, EventType, MetricId } from "./contracts/foundations";
+
+export const RULESET_VERSION = "ugs-ruleset@0.6.3";
+export const RULESET_SHORT_CODE = "UGS063";
 
 export type UniverseTemplateId =
   | "hard_science"
@@ -38,36 +42,6 @@ export type LawDomainId =
   | "consciousness"
   | "divinity"
   | "causality";
-
-export type MetricId =
-  | "age"
-  | "stability"
-  | "lifePotential"
-  | "civilizationPotential"
-  | "magicIntensity"
-  | "divineActivity"
-  | "causalityIntegrity";
-
-export type EraId =
-  | "creation"
-  | "stars"
-  | "elements"
-  | "life"
-  | "civilization"
-  | "myth"
-  | "ascension"
-  | "ending";
-
-export type EventType =
-  | "creation"
-  | "stars"
-  | "elements"
-  | "life"
-  | "civilization"
-  | "myth"
-  | "ascension"
-  | "ending"
-  | "anomaly";
 
 export type LawRating = {
   value: number;
@@ -367,23 +341,6 @@ export type Galaxy = {
   starSystems: StarSystem[];
   sourceEventIds: string[];
   sourceRuleIds: string[];
-};
-
-export type TimelineEvent = {
-  id: string;
-  age: number;
-  ageLabel: string;
-  era: EraId;
-  type: EventType;
-  title: string;
-  description: string;
-  causes: string[];
-  effects: EventEffect[];
-  importance: number;
-  location: string;
-  sourceIds: string[];
-  triggeredByEventIds: string[];
-  causalNotes: string[];
 };
 
 export type Explanation = {

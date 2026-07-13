@@ -135,19 +135,33 @@ function pickCivilizationPath(context: CivilizationGenerationContext, values: Ci
   const consciousness = context.laws.consciousness.rating.value;
   const divinity = context.laws.divinity.rating.value;
   const magic = context.laws.magic.rating.value;
-  if (values.extinctionRisk >= 78 || values.stability < 28) return "lost";
-  if ((values.technologyLevel + values.magicLevel + values.faithIntensity) / 3 >= 68 && values.stability >= 42) return "ascended";
-  if (values.magicLevel >= 50 && magic >= 55) return "arcane_empire";
-  if (values.faithIntensity >= 50 && divinity >= 55) return "theocracy";
-  if (consciousness >= 65 && values.stability >= 45) return "collective_mind";
-  if (values.technologyLevel >= 48 && values.expansionDrive >= 45) return "galactic";
-  if (values.technologyLevel >= 42 && values.stability >= 32) return "planetary";
-  if (values.technologyLevel >= 34) return rng.bool(0.65) ? "city_state" : "tribal";
-  const weights = civilizationPathProfiles.map((profile) => ({
+  const weights = civilizationPathProfiles.filter((profile) => pathIsEligible(profile.id, values, { consciousness, divinity, magic })).map((profile) => ({
     item: profile.id,
-    weight: civilizationPathWeight(profile, values, { consciousness, divinity, magic }),
+    weight: civilizationPathWeight(profile, values, { consciousness, divinity, magic }) + pathSituationBoost(profile.id, values),
   }));
   return rng.weighted(weights);
+}
+
+function pathIsEligible(
+  path: CivilizationPath,
+  values: CivilizationValues,
+  laws: { consciousness: number; divinity: number; magic: number },
+): boolean {
+  if (path === "tribal") return values.technologyLevel <= 55;
+  if (path === "city_state") return values.technologyLevel <= 70 && values.stability >= 25;
+  if (path === "planetary") return values.technologyLevel >= 35 && values.stability >= 35;
+  if (path === "galactic") return values.technologyLevel >= 45 && values.expansionDrive >= 45;
+  if (path === "arcane_empire") return values.magicLevel >= 45 || laws.magic >= 65;
+  if (path === "theocracy") return values.faithIntensity >= 45 || laws.divinity >= 65;
+  if (path === "collective_mind") return values.stability >= 45 || laws.consciousness >= 65;
+  if (path === "ascended") return values.technologyLevel + values.magicLevel + values.faithIntensity >= 150;
+  return values.extinctionRisk >= 45;
+}
+
+function pathSituationBoost(path: CivilizationPath, values: CivilizationValues): number {
+  if (path === "lost") return Math.max(0, values.extinctionRisk - 70) / 10 + Math.max(0, 30 - values.stability) / 8;
+  if (path === "ascended") return Math.max(0, values.technologyLevel + values.magicLevel + values.faithIntensity - 175) / 24;
+  return 0;
 }
 
 function generateMythology(

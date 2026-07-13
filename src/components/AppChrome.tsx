@@ -1,4 +1,4 @@
-import { BarChart3, BookMarked, BookOpen, Clipboard, Dices, History, Radar, ScrollText, Sparkles, Telescope, UsersRound } from "lucide-react";
+import { BarChart3, BookMarked, BookOpen, Clipboard, Dices, History, Radar, ScrollText, Sparkles, Telescope, UsersRound } from "./icons";
 import { RULESET_VERSION, UNIVERSE_TEMPLATES, type UniverseTemplateId } from "../sim";
 import type { AppPageId } from "../ui/useUniverseAppModel";
 

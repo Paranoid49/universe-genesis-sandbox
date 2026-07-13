@@ -1,8 +1,11 @@
-import { ScrollText, Sparkles, UsersRound } from "lucide-react";
+import { ScrollText, Sparkles, UsersRound } from "./icons";
+import { useMemo, useState } from "react";
 import type { Civilization, UniverseSummary } from "../sim";
 import { civilizationEventTypeName, civilizationFateName, civilizationPathName, mythologyTypeName, signed, speciesTypeName } from "../ui/labels";
 import type { CivilizationStats } from "../ui/selectors";
 import { AttributeBar, SectionHeader, SourceList, StatTile } from "./common";
+
+const PAGE_SIZE = 30;
 
 export function CivilizationPanel({
   universe,
@@ -17,6 +20,25 @@ export function CivilizationPanel({
   sourceLabelById: Map<string, string>;
   onSelectCivilization: (civilization: Civilization) => void;
 }) {
+  const [query, setQuery] = useState("");
+  const [pathFilter, setPathFilter] = useState("all");
+  const [page, setPage] = useState(0);
+  const pathOptions = useMemo(
+    () => [...new Set(universe.civilizations.map((civilization) => civilization.path))].sort(),
+    [universe.civilizations],
+  );
+  const filteredCivilizations = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase("zh-CN");
+    return universe.civilizations.filter((civilization) => {
+      const matchesPath = pathFilter === "all" || civilization.path === pathFilter;
+      const searchText = `${civilization.name} ${civilization.originPlanetName} ${civilizationPathName(civilization.path)} ${civilizationFateName(civilization.fate)}`.toLocaleLowerCase("zh-CN");
+      return matchesPath && (!normalizedQuery || searchText.includes(normalizedQuery));
+    });
+  }, [pathFilter, query, universe.civilizations]);
+  const pageCount = Math.max(1, Math.ceil(filteredCivilizations.length / PAGE_SIZE));
+  const visiblePage = Math.min(page, pageCount - 1);
+  const visibleCivilizations = filteredCivilizations.slice(visiblePage * PAGE_SIZE, (visiblePage + 1) * PAGE_SIZE);
+
   return (
     <section className="civilization-panel" aria-label="文明演化">
       <SectionHeader
@@ -35,8 +57,22 @@ export function CivilizationPanel({
         <div className="civilization-grid">
           <section className="civilization-list" aria-label="文明列表">
             <h4>文明列表</h4>
-            <div>
-              {universe.civilizations.map((civilization) => (
+            <div className="civilization-filters">
+              <label>
+                <span>搜索文明</span>
+                <input value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="名称、行星、路径或终局" />
+              </label>
+              <label>
+                <span>文明路径</span>
+                <select value={pathFilter} onChange={(event) => { setPathFilter(event.target.value); setPage(0); }}>
+                  <option value="all">全部路径</option>
+                  {pathOptions.map((path) => <option key={path} value={path}>{civilizationPathName(path)}</option>)}
+                </select>
+              </label>
+              <small role="status">找到 {filteredCivilizations.length} 个文明，每页最多显示 {PAGE_SIZE} 个</small>
+            </div>
+            <div className="civilization-results">
+              {visibleCivilizations.map((civilization) => (
                 <button
                   className={civilization.id === selectedCivilization.id ? "civilization-select active" : "civilization-select"}
                   key={civilization.id}
@@ -53,7 +89,13 @@ export function CivilizationPanel({
                   </small>
                 </button>
               ))}
+              {visibleCivilizations.length === 0 && <p className="civilization-empty">没有符合当前筛选条件的文明。</p>}
             </div>
+            {pageCount > 1 && <div className="civilization-pagination" aria-label="文明分页">
+              <button type="button" disabled={visiblePage === 0} onClick={() => setPage((current) => Math.max(0, current - 1))}>上一页</button>
+              <span>第 {visiblePage + 1} / {pageCount} 页</span>
+              <button type="button" disabled={visiblePage >= pageCount - 1} onClick={() => setPage((current) => Math.min(pageCount - 1, current + 1))}>下一页</button>
+            </div>}
           </section>
 
           <article className="civilization-detail" aria-label="文明详情">

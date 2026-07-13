@@ -13,6 +13,7 @@ src/sim/contracts 跨模块稳定数据契约
 src/sim/recipes 权重公式、阈值和路径决策
 src/ui         页面标签、派生选择器和页面 view-model
 src/components 展示组件，只消费已生成数据和回调
+src/components/pages 页面级展示组件，避免装配入口承载大段页面结构
 src/App.tsx    页面装配入口，不承载生成规则
 tests          阶段级自动化验收
 docs           阶段规格、架构约束和仓库说明
@@ -71,11 +72,17 @@ seed + templateId + rulesetVersion
 
 `App.tsx` 只负责页面结构装配。新增页面时，应优先新增展示组件和必要的 view-model 状态，不要把新业务状态直接堆回 `App.tsx`。
 
+空间对象和文明选择状态由 `useUniverseSelection.ts` 独立管理；`useUniverseAppModel.ts` 不再直接维护各层级选择算法。
+
 阶段 6 的干预状态属于 view-model 显式状态。页面可以构造 `InterventionInput[]` 并传入生成入口，但不得在模拟核心中读取浏览器状态。
 
 阶段 7 的 `observationProjection.ts` 是只读 UI 投影层。它只能把 `UniverseSummary` 转换为稳定二维坐标、叠层强度和文字摘要；`ObservationConsole` 负责层级、叠层、节点与时间位置等瞬时视图状态。两者都不得修改模拟对象或反向进入生成流水线。
 
-阶段 8 的 `archive.ts` 定义 A1 纯契约、校验和不可变集合操作，`archiveStorage.ts` 是唯一访问 `localStorage` 的模块，`useUniverseArchive.ts` 负责持久化成功后再提交内存状态。存档只保存分享码和用户元数据，恢复由 `useUniverseAppModel.ts` 解码分享码后重新进入生成器。
+阶段 8 的 `archive.ts` 定义 A1 纯契约、校验和不可变集合操作，`archiveStorage.ts` 是唯一访问 `localStorage` 的模块，`useUniverseArchive.ts` 负责持久化成功后再提交内存状态。已持久化数据在启动时执行结构校验，外部导入按批次让出浏览器主线程并完整验证可恢复性。存档只保存分享码和用户元数据，恢复由 `useUniverseAppModel.ts` 解码分享码后重新进入生成器。
+
+基础事件、纪元和指标类型位于 `contracts/foundations.ts`，干预契约只依赖基础契约，禁止 `contracts` 反向导入聚合 `types.ts`。
+
+样式按基础布局、模拟浏览、观察台/图书馆功能和最终响应式覆盖拆分为四个入口文件；响应式文件必须最后加载，每个文件都受架构行数门禁约束。
 
 ## 5. 生成器扩展规则
 

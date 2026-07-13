@@ -10,13 +10,9 @@ import {
   normalizeSeed,
   RULESET_VERSION,
   UniverseInputError,
-  type Civilization,
   type EraId,
-  type Galaxy,
   type InterventionInput,
   type MiracleType,
-  type Planet,
-  type StarSystem,
   type UniverseTemplateId,
 } from "../sim";
 import { buildSourceLabelMap, summarizeCivilizations, summarizeSpace } from "./selectors";
@@ -24,6 +20,7 @@ import { createClientSeed } from "./clientSeed";
 import { buildMiracleTargetOptions } from "./miracleTargets";
 import { readInitialShare } from "./shareState";
 import { useShareController } from "./useShareController";
+import { useUniverseSelection } from "./useUniverseSelection";
 
 const DEFAULT_SEED = "LUX-7F3A-91C2";
 const DEFAULT_TEMPLATE_ID: UniverseTemplateId = "high_magic";
@@ -32,18 +29,6 @@ const DEFAULT_COMPARE_SEED = "ASH-44DE-0101";
 export type AppPageId = "overview" | "observe" | "space" | "civilizations" | "miracles" | "timeline" | "laws" | "logs" | "library";
 
 export type { MiracleTargetOption } from "./miracleTargets";
-
-export const eraFilterOptions: Array<{ id: EraId | "all"; label: string }> = [
-  { id: "all", label: "全部" },
-  { id: "creation", label: "创世" },
-  { id: "stars", label: "星辰" },
-  { id: "elements", label: "元素" },
-  { id: "life", label: "生命" },
-  { id: "civilization", label: "文明" },
-  { id: "myth", label: "神话" },
-  { id: "ascension", label: "飞升" },
-  { id: "ending", label: "终局" },
-];
 
 type UseUniverseAppModelInput = {
   initialPage?: AppPageId;
@@ -63,10 +48,6 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
   const [compareDraftSeed, setCompareDraftSeed] = useState(DEFAULT_COMPARE_SEED);
   const [compareSeed, setCompareSeed] = useState(normalizeSeed(DEFAULT_COMPARE_SEED));
   const [eraFilter, setEraFilter] = useState<EraId | "all">("all");
-  const [selectedGalaxyId, setSelectedGalaxyId] = useState<string | undefined>();
-  const [selectedSystemId, setSelectedSystemId] = useState<string | undefined>();
-  const [selectedPlanetId, setSelectedPlanetId] = useState<string | undefined>();
-  const [selectedCivilizationId, setSelectedCivilizationId] = useState<string | undefined>();
   const [interventionInputs, setInterventionInputs] = useState<InterventionInput[]>(initialShare?.interventions ?? []);
   const [selectedMiracleType, setSelectedMiracleType] = useState<MiracleType>(miracleDefinitions[0].type);
   const [selectedMiracleTargetId, setSelectedMiracleTargetId] = useState<string | undefined>();
@@ -80,10 +61,7 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
     () => activePage === "laws" ? compareUniverseLaws(activeSeed, compareSeed, templateId) : undefined,
     [activePage, activeSeed, compareSeed, templateId],
   );
-  const selectedGalaxy = universe.galaxies.find((galaxy) => galaxy.id === selectedGalaxyId) ?? universe.galaxies[0];
-  const selectedSystem = selectedGalaxy?.starSystems.find((system) => system.id === selectedSystemId) ?? selectedGalaxy?.starSystems[0];
-  const selectedPlanet = selectedSystem?.planets.find((planet) => planet.id === selectedPlanetId) ?? selectedSystem?.planets[0];
-  const selectedCivilization = universe.civilizations.find((civilization) => civilization.id === selectedCivilizationId) ?? universe.civilizations[0];
+  const selection = useUniverseSelection(universe);
   const spaceStats = useMemo(() => summarizeSpace(universe), [universe]);
   const civilizationStats = useMemo(() => summarizeCivilizations(universe), [universe]);
   const sourceLabelById = useMemo(() => buildSourceLabelMap(universe), [universe]);
@@ -122,27 +100,6 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
     }
     setCompareInputError(undefined);
     setCompareSeed(normalizeSeed(compareDraftSeed));
-  }
-
-  function selectGalaxy(galaxy: Galaxy) {
-    const firstSystem = galaxy.starSystems[0];
-    const firstPlanet = firstSystem?.planets[0];
-    setSelectedGalaxyId(galaxy.id);
-    setSelectedSystemId(firstSystem?.id);
-    setSelectedPlanetId(firstPlanet?.id);
-  }
-
-  function selectSystem(system: StarSystem) {
-    setSelectedSystemId(system.id);
-    setSelectedPlanetId(system.planets[0]?.id);
-  }
-
-  function selectPlanet(planet: Planet) {
-    setSelectedPlanetId(planet.id);
-  }
-
-  function selectCivilization(civilization: Civilization) {
-    setSelectedCivilizationId(civilization.id);
   }
 
   function changeTemplateId(nextTemplateId: UniverseTemplateId) {
@@ -217,13 +174,13 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
     miracleTargetOptions,
     randomizeSeed,
     restoreArchivedUniverse,
-    selectedCivilization,
+    selectedCivilization: selection.selectedCivilization,
     selectedEvent,
-    selectedGalaxy,
+    selectedGalaxy: selection.selectedGalaxy,
     selectedMiracleTargetId: activeMiracleTargetId,
     selectedMiracleType,
-    selectedPlanet,
-    selectedSystem,
+    selectedPlanet: selection.selectedPlanet,
+    selectedSystem: selection.selectedSystem,
     seedInputError,
     setActivePage,
     setCompareDraftSeed: changeCompareDraftSeed,
@@ -239,10 +196,10 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
     templateId,
     universe,
     compareSeedNow,
-    selectCivilization,
-    selectGalaxy,
-    selectPlanet,
-    selectSystem,
+    selectCivilization: selection.selectCivilization,
+    selectGalaxy: selection.selectGalaxy,
+    selectPlanet: selection.selectPlanet,
+    selectSystem: selection.selectSystem,
   };
 }
 
