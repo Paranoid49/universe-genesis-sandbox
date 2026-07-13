@@ -1,24 +1,21 @@
 # 贡献指南
 
-这份文档说明如何在 Universe Genesis Sandbox 中进行开发。项目进度以阶段文档和里程碑文档为准；README 只作为稳定项目入口；贡献指南只描述长期有效的开发约定。
+这份文档说明如何在 Universe Genesis Sandbox 中进行开发。产品范围以产品定义为准，实施顺序以产品重构路线为准，README 只作为稳定项目入口，贡献指南只描述长期有效的开发约定。
 
 ## 开发前先读
 
-开始动手前，请先确认本次变更对应的阶段和规格：
+开始动手前，请先确认本次变更对应的当前事实来源：
 
-- [docs/milestones.md](docs/milestones.md)：长期路线图与阶段边界。
-- [docs/phase-0.md](docs/phase-0.md)：产品边界、非目标、确定性原则。
-- [docs/phase-1.md](docs/phase-1.md)：第一版可复现宇宙卡片的实现规格。
-- [docs/phase-2.md](docs/phase-2.md)：结构化法则、法则关系和指标影响来源。
-- [docs/phase-3.md](docs/phase-3.md)：纪元时间线、事件因果和时间线影响摘要。
-- [docs/phase-4.md](docs/phase-4.md)：星系、恒星、行星、生命样本、局部探索路径和阶段 5 前置契约。
-- [docs/phase-5.md](docs/phase-5.md)：文明实体、文明路径、神话系统、文明历史和阶段 6 禁区。
-- [docs/phase-6.md](docs/phase-6.md)：造物主干预、结构化奇迹、干预日志、反噬状态和阶段 7 禁区。
-- [docs/phase-7.md](docs/phase-7.md)：轻量二维观察台、三级投影、信息叠层、时间浏览和文字降级路径。
-- [docs/phase-8.md](docs/phase-8.md)：A1 本地存档、收藏、搜索、恢复、导入导出和错误边界。
+- [docs/README.md](docs/README.md)：当前文档导航与事实来源优先级。
+- [docs/product-definition.md](docs/product-definition.md)：产品范围、核心体验与产品原则。
+- [docs/milestones.md](docs/milestones.md)：产品重构步骤、可运行产物与完成标准。
 - [docs/architecture.md](docs/architecture.md)：模块边界、依赖方向、生成数据流和测试组织。
+- [docs/quality-gates.md](docs/quality-gates.md)：自动化测试、覆盖率和发布门禁。
+- [docs/non-functional-requirements.md](docs/non-functional-requirements.md)：性能、兼容性、可靠性和无障碍要求。
 
-如果你的变更会改变产品范围、数据契约、阶段门禁或用户路径，应先更新对应文档，再改代码。
+旧阶段规格和历史评审统一位于 [docs/archive](docs/archive/README.md)，只用于理解已有实现，不作为新开发依据。
+
+如果变更会改变产品范围、数据契约、实施步骤、质量门禁或用户路径，应先更新对应的当前文档，再改代码。
 
 ## 本地开发
 
@@ -69,7 +66,7 @@ src/sim/share       分享码与链接参数恢复
 src/sim/universe    UniverseSummary 总生成入口
 src/App.tsx         第一版网页应用界面
 tests/              自动化验收测试
-docs/               阶段规格与项目文档
+docs/               当前事实来源与历史文档归档
 ```
 
 ## 确定性规则
@@ -92,13 +89,13 @@ docs/               阶段规格与项目文档
 - 生成内容不能只是随机拼词，重要结果应能解释来源。
 - 分享体验应保持轻量：用户可见文案优先简短，完整复现信息由分享码或链接参数承载。
 - 新增内容池优先放入 `src/sim/content/`，核心生成器只保留算法、权重消费和结构组装。
-- 阶段 4 局部对象生成应消费 `UniverseSummary.timelineImpact`，不要从页面文案反推生成倾向。
-- 阶段 5 文明生成应从 `Biosphere.civilizationSeed` 或明确的生命行星来源派生，不要脱离阶段 4 局部对象凭空生成。
-- 阶段 6 干预必须来自显式 `InterventionInput[]`，不要读取浏览器时间、本地存储或任何不可复现输入。
-- 阶段 6 局部奇迹必须产生真实目标字段变化和 `TargetMutation`，不能只生成叙述日志。
+- 当前局部对象生成应消费 `UniverseSummary.timelineImpact`，不要从页面文案反推生成倾向。
+- 当前文明生成应从 `Biosphere.civilizationSeed` 或明确的生命行星来源派生，不要脱离局部对象凭空生成。
+- 当前干预必须来自显式 `InterventionInput[]`，不要读取浏览器时间、本地存储或任何不可复现输入。
+- 当前局部奇迹必须产生真实目标字段变化和 `TargetMutation`，不能只生成叙述日志。
 - 干预分享格式必须携带版本号，损坏载荷必须警告并回退。
-- 阶段 7 可视化只能通过 `src/ui` 只读投影消费结构化数据，不得把视图状态写回模拟核心。
-- 阶段 8 只有 `archiveStorage.ts` 可以访问本地存储，存档恢复必须通过版本化分享码重新生成宇宙。
+- 当前可视化只能通过 `src/ui` 只读投影消费结构化数据，不得把视图状态写回模拟核心。
+- 当前实现只有 `archiveStorage.ts` 可以访问本地存储，存档恢复必须通过版本化分享码重新生成宇宙。
 
 ## 测试要求
 
@@ -116,11 +113,11 @@ docs/               阶段规格与项目文档
 
 完整门禁与阈值见 [docs/quality-gates.md](docs/quality-gates.md)，非功能要求见 [docs/non-functional-requirements.md](docs/non-functional-requirements.md)。
 
-如果新增阶段验收要求，请把测试补到 `tests/` 中。
+如果新增实施步骤的验收要求，请把测试补到 `tests/` 中。
 
 ## 合并请求检查清单
 
-- 变更对应的阶段和文档已经明确。
+- 变更对应的实施步骤和当前文档已经明确。
 - 代码、测试、文档三者保持一致。
 - 涉及生成逻辑时，已检查固定 seed 行为。
 - 没有引入无关重构。

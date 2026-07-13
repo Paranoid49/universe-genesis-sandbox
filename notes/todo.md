@@ -25,7 +25,7 @@
 
 ## 阶段 1
 
-- [x] 编写 `docs/phase-1.md`。
+- [x] 编写 `docs/archive/legacy-phases/phase-1.md`。
 - [x] 创建网页应用骨架。
 - [x] 实现 `rulesetVersion` 与 seed 标准化。
 - [x] 实现确定性 PRNG 与派生随机流。
@@ -38,7 +38,7 @@
 
 ## 阶段 2
 
-- [x] 编写 `docs/phase-2.md`。
+- [x] 编写 `docs/archive/legacy-phases/phase-2.md`。
 - [x] 实现每个宇宙至少 12 条结构化法则。
 - [x] 实现每类法则至少 2 条结构化法则。
 - [x] 实现法则关系与冲突、协同、约束影响。
@@ -49,7 +49,7 @@
 
 ## 阶段 3
 
-- [x] 先编写 `docs/phase-3.md`。
+- [x] 先编写 `docs/archive/legacy-phases/phase-3.md`。
 - [x] 将时间线事件数量提升到至少 30 条。
 - [x] 扩展 `TimelineEvent`，加入发生位置、影响来源、前序事件和因果解释。
 - [x] 建立纪元筛选能力，覆盖创世、星辰、元素、生命、文明、神话、飞升和终局。
@@ -59,7 +59,7 @@
 
 ## 阶段 4 基础支撑
 
-- [x] 编写 `docs/phase-4.md`，明确阶段 4 开发入口和前置契约。
+- [x] 编写 `docs/archive/legacy-phases/phase-4.md`，明确阶段 4 开发入口和前置契约。
 - [x] 在 `UniverseSummary` 中加入 `timelineImpact`。
 - [x] 把时间线事件影响折算为局部对象生成偏置。
 - [x] 将法则素材和时间线事件池拆入 `src/sim/content/`。
@@ -80,7 +80,7 @@
 
 ## 阶段 5
 
-- [x] 编写 `docs/phase-5.md`，明确文明演化、神话系统、验收标准和阶段 6 禁区。
+- [x] 编写 `docs/archive/legacy-phases/phase-5.md`，明确文明演化、神话系统、验收标准和阶段 6 禁区。
 - [x] 定义独立文明实体、文明路径、文明事件和神话系统。
 - [x] 从 `Biosphere.civilizationSeed` 生成文明样本。
 - [x] 在页面中提供文明详情和文明事件浏览。
@@ -88,6 +88,6 @@
 
 ## 阶段 6
 
-- [ ] 先编写 `docs/phase-6.md`，明确造物主干预与奇迹系统的输入边界。
+- [ ] 先编写 `docs/archive/legacy-phases/phase-6.md`，明确造物主干预与奇迹系统的输入边界。
 - [ ] 定义干预动作、干预代价和干预日志数据结构。
 - [ ] 明确干预如何参与确定性复现。
