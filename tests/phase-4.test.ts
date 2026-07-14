@@ -98,10 +98,11 @@ describe("阶段 4 局部对象基础模型", () => {
     expect(markup).toContain("阶段 5 文明入口");
   });
 
-  it("默认总览通过一级导航进入重型页面，不直接渲染全部页面内容", () => {
-    const markup = renderToStaticMarkup(createElement(App));
+  it("旧概览兼容入口通过一级导航进入重型页面，不直接渲染全部页面内容", () => {
+    const markup = renderToStaticMarkup(createElement<AppProps>(App, { initialPage: "overview" }));
 
-    expect(markup).toContain("主页面导航");
+    expect(markup).toContain("旧版隔离兼容导航");
+    expect(markup).toContain("不作为运行中宇宙的事实来源");
     expect(markup).toContain("创世总览");
     expect(markup).toContain("宇宙快照");
     expect(markup).not.toContain("星系列表");

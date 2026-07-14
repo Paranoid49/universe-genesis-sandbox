@@ -71,7 +71,7 @@ npm run check:release
 
 上述阶段构成新的产品重构基线，但当前体验仍以结构化结果和事件浏览为主，不代表目标产品已经成立。后续实施以新的产品定义和产品重构路线为准。
 
-产品重构步骤 1“可追因的宇宙生成器”已经完成第十二轮裁定成立的三项 P1 与两项 P2 整改并通过完整发布门禁，当前等待未参与步骤 1 实现的全新独立 Agent 依据冻结基线执行首次完整评审。有效 P0、P1 关闭且 P2 均明确处置前，步骤 1 不标记完成；步骤 2 至步骤 7 均未开始。
+产品重构步骤 1“可追因的宇宙生成器”和步骤 2“持续演化的宇宙”均已完成，步骤 2 第三轮有限复查确认有效 P0、P1 已关闭、P2 均已明确处置，完整发布门禁通过。步骤 3 验收基线已经冻结，步骤 3 至步骤 7 尚未实现。
 
 ## 项目文档
 
@@ -79,7 +79,9 @@ npm run check:release
 - [当前产品定义](docs/product-definition.md)
 - [产品重构实施路线](docs/milestones.md)
 - [旧产品模块迁移矩阵](docs/legacy-module-migration.md)
-- [步骤 1：可追因的宇宙生成器，待全新复审](docs/step-1.md)
+- [步骤 1：可追因的宇宙生成器](docs/step-1.md)
+- [步骤 2 冻结验收口径](docs/step-2-freeze.md)
+- [步骤 2：持续演化的宇宙](docs/step-2.md)
 - [架构说明](docs/architecture.md)
 - [质量门禁](docs/quality-gates.md)
 - [非功能需求](docs/non-functional-requirements.md)

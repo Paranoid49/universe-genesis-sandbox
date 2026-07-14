@@ -213,6 +213,28 @@ button:hover,
   background: #3a3026;
 }
 
+.legacy-compatibility-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 18px;
+  padding: 12px 14px;
+  border: 1px solid rgba(199, 164, 92, 0.34);
+  border-radius: 12px;
+  background: rgba(199, 164, 92, 0.08);
+}
+
+.legacy-compatibility-banner div {
+  display: grid;
+  gap: 3px;
+}
+
+.legacy-compatibility-banner span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 .page-stack {
   display: grid;
   gap: 14px;

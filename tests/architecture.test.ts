@@ -124,29 +124,29 @@ describe("架构边界门禁", () => {
   it("当前步骤文档使用同一发布快照且不硬编码下一名评审序号", () => {
     const documentRoot = pathFromTest(import.meta.url, "../docs");
     const currentFactPaths = [
-      resolve(documentRoot, "step-1.md"),
+      resolve(documentRoot, "architecture.md"),
       resolve(documentRoot, "quality-gates.md"),
       resolve(documentRoot, "non-functional-requirements.md"),
       resolve(documentRoot, "legacy-module-migration.md"),
     ];
     const currentFactDocuments = currentFactPaths.map((file) => readFileSync(file, "utf8"));
     const snapshotDocuments = currentFactPaths.map((file) => readFileSync(file, "utf8"));
-    const snapshots = snapshotDocuments.map((content) => content.match(/^当前发布快照：.+$/m)?.[0]);
+    const snapshots = snapshotDocuments.map((content) => content.match(/^步骤 2 当前发布快照：.+$/m)?.[0]);
     expect(snapshots.every(Boolean)).toBe(true);
     expect(new Set(snapshots).size).toBe(1);
-    const targetedBreakdowns = currentFactDocuments.map((content) => content.match(/^当前定向测试组成：.+$/m)?.[0]);
+    const targetedBreakdowns = currentFactDocuments.map((content) => content.match(/^步骤 2 当前定向测试组成：.+$/m)?.[0]);
     expect(targetedBreakdowns.every(Boolean)).toBe(true);
     expect(new Set(targetedBreakdowns).size).toBe(1);
-    expect(targetedBreakdowns[0]).toContain("步骤 1 契约测试 21 项；生产工厂守卫 2 项；架构测试 9 项；合计 32 项");
-    expect(new Set([...targetedBreakdowns.slice(0, -1), targetedBreakdowns[0]!.replace("架构测试 9 项", "架构测试 8 项")]).size).toBe(2);
+    expect(targetedBreakdowns[0]).toContain("步骤 2 核心契约 19 项；步骤 2 架构 3 项；步骤 2 UI 与存储 22 项；步骤 2 性能 2 项；步骤 2 四浏览器纵向闭环 8 项；合计 54 项");
+    expect(new Set([...targetedBreakdowns.slice(0, -1), targetedBreakdowns[0]!.replace("步骤 2 架构 3 项", "步骤 2 架构 2 项")]).size).toBe(2);
     expect(currentFactDocuments[0]).not.toMatch(/使用第[^\s]+名全新严格评审/);
     for (const content of currentFactDocuments) {
       expect(currentFactConflicts(content)).toEqual([]);
       expect(content).not.toMatch(/所有 P0、P1、P2 必须整改|P0、P1、P2 均为零|问题归零后才能宣布步骤完成|不存在 P0、P1 或 P2 问题|不存在任何 P2|P2 必须为零/);
     }
 
-    const conflictingFacts = `${currentFactDocuments[0]}\n- E2E：50 项通过、2 项跳过。`;
-    expect(currentFactConflicts(conflictingFacts)).toContain("E2E 通过数量存在 50、54 两套当前值");
+    const conflictingFacts = `${currentFactDocuments[0]}\n步骤 2 当前发布快照：E2E：1 项通过、2 项跳过。\n步骤 2 当前发布快照：E2E：2 项通过、2 项跳过。`;
+    expect(currentFactConflicts(conflictingFacts).some((issue) => issue.startsWith("E2E 通过数量存在"))).toBe(true);
     const conflictingRule = `${currentFactDocuments[1]}\n所有 P0、P1、P2 必须整改。`;
     expect(conflictingRule).toMatch(/所有 P0、P1、P2 必须整改/);
     const synonymousConflictingRule = `${currentFactDocuments[0]}\n严格评审不存在 P0、P1 或 P2 问题。`;
@@ -193,6 +193,18 @@ describe("架构边界门禁", () => {
       ["src/components/pages/OverviewPage.tsx", 120],
       ["src/components/pages/TimelinePage.tsx", 100],
       ["src/components/pages/LawsPage.tsx", 120],
+      ["src/components/RuntimeApplication.tsx", 100],
+      ["src/components/LegacyApplication.tsx", 100],
+      ["src/ui/useRuntimeUniverseModel.ts", 180],
+      ["src/ui/runtimeStorage.ts", 130],
+      ["src/sim/contracts/runtime.ts", 190],
+      ["src/sim/runtime-state.ts", 330],
+      ["src/sim/runtime-state-validation.ts", 80],
+      ["src/sim/runtime-random.ts", 140],
+      ["src/sim/runtime-events.ts", 60],
+      ["src/sim/runtime-history.ts", 40],
+      ["src/sim/runtime-causality.ts", 240],
+      ["src/sim/runtime-archive.ts", 100],
       ["src/sim/timeline.ts", 320],
       ["src/sim/civilizations.ts", 390],
       ["src/sim/interventions.ts", 410],
@@ -252,6 +264,7 @@ describe("架构边界门禁", () => {
       ["src/styles.css", 700],
       ["src/styles-simulation.css", 760],
       ["src/styles-features.css", 420],
+      ["src/styles-runtime.css", 120],
       ["src/styles-responsive.css", 220],
       ["src/styles-causality.css", 460],
       ["src/styles-causality-responsive.css", 70],
@@ -413,6 +426,7 @@ function hasDefaultModifier(node: ts.Node): boolean {
 }
 
 function currentFactConflicts(content: string): string[] {
+  const currentSnapshot = content.split(/\r?\n/).filter((line) => line.startsWith("步骤 2 当前发布快照：")).join("\n");
   const patterns: Array<[string, RegExp]> = [
     ["模拟测试数量", /模拟测试\s+(\d+)\s+项/g],
     ["UI 测试数量", /UI 测试\s+(\d+)\s+项/g],
@@ -421,7 +435,7 @@ function currentFactConflicts(content: string): string[] {
     ["CSS gzip", /CSS gzip(?:\s+为)?\s*(\d+)\s+字节/g],
   ];
   return patterns.flatMap(([label, pattern]) => {
-    const values = [...content.matchAll(pattern)].map((match) => match[1]);
+    const values = [...currentSnapshot.matchAll(pattern)].map((match) => match[1]);
     const unique = [...new Set(values)].sort((left, right) => Number(left) - Number(right));
     return unique.length > 1 ? [`${label}存在 ${unique.join("、")} 两套当前值`] : [];
   });

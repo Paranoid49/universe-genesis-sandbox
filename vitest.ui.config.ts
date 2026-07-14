@@ -27,6 +27,7 @@ export default defineConfig({
         "src/components/pages/**": { statements: 80, branches: 75, functions: 80, lines: 80 },
         "src/ui/**": { statements: 75, branches: 65, functions: 70, lines: 75 },
         "src/ui/archive.ts": { statements: 70, branches: 65, functions: 70, lines: 85 },
+        "src/ui/runtimeStorage.ts": { statements: 90, branches: 55, functions: 75, lines: 95 },
         "src/ui/observationProjection.ts": { statements: 90, branches: 65, functions: 90, lines: 95 },
         "src/ui/useUniverseAppModel.ts": { statements: 80, branches: 70, functions: 80, lines: 80 },
       },

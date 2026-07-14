@@ -1,8 +1,9 @@
 import { BarChart3, BookMarked, BookOpen, Clipboard, Dices, History, Link, Radar, ScrollText, Sparkles, Telescope, UsersRound } from "./icons";
 import { RULESET_VERSION, UNIVERSE_TEMPLATES, type UniverseTemplateId } from "../sim";
-import type { AppPageId } from "../ui/useUniverseAppModel";
+import type { AppPageId } from "../ui/appPages";
 
 const appPageOptions: Array<{ id: AppPageId; label: string; description: string; icon: typeof BarChart3 }> = [
+  { id: "runtime", label: "运行", description: "持续演化、时间控制与检查点", icon: Sparkles },
   { id: "overview", label: "概览", description: "宇宙摘要与指标", icon: BarChart3 },
   { id: "causality", label: "因果", description: "结果、原因与影响链路", icon: Link },
   { id: "observe", label: "观察台", description: "二维宇宙投影与时间浏览", icon: Radar },
@@ -25,6 +26,7 @@ export function UniverseToolbar({
   onCreate,
   onRandomize,
   onCopy,
+  showShare = true,
 }: {
   draftSeed: string;
   templateId: UniverseTemplateId;
@@ -35,6 +37,7 @@ export function UniverseToolbar({
   onCreate: () => void;
   onRandomize: () => void;
   onCopy: () => void;
+  showShare?: boolean;
 }) {
   return (
     <section className="topbar" aria-label="创世工具栏">
@@ -62,9 +65,9 @@ export function UniverseToolbar({
         <button className="icon-action" type="button" onClick={onRandomize} title="随机 seed">
           <Dices size={17} />随机
         </button>
-        <button className="icon-action" type="button" onClick={onCopy} title="复制分享文本和链接">
+        {showShare && <button className="icon-action" type="button" onClick={onCopy} title="复制旧版分享文本和链接">
           <Clipboard size={17} />{copyState}
-        </button>
+        </button>}
         {inputError && <p className="input-error" id="seed-input-error" role="alert">{inputError}</p>}
       </div>
     </section>
@@ -73,8 +76,8 @@ export function UniverseToolbar({
 
 export function PageNavigation({ activePage, onChange }: { activePage: AppPageId; onChange: (page: AppPageId) => void }) {
   return (
-    <nav className="page-navigation" aria-label="主页面导航">
-      {appPageOptions.map((page) => {
+    <nav className="page-navigation" aria-label="旧版隔离兼容导航">
+      {appPageOptions.filter((page) => page.id !== "runtime").map((page) => {
         const Icon = page.icon;
         return (
           <button aria-current={activePage === page.id ? "page" : undefined} aria-label={`${page.label}：${page.description}`} className={activePage === page.id ? "active" : ""} key={page.id} type="button" onClick={() => onChange(page.id)} title={page.description}>
@@ -86,4 +89,15 @@ export function PageNavigation({ activePage, onChange }: { activePage: AppPageId
       })}
     </nav>
   );
+}
+
+export function RuntimeNavigation({ onOpenLegacy, disabled = false }: { onOpenLegacy: () => void; disabled?: boolean }) {
+  return <nav className="page-navigation" aria-label="主页面导航">
+    <button aria-current="page" aria-label="运行：持续演化、时间控制与检查点" className="active" type="button" title="持续演化、时间控制与检查点">
+      <Sparkles size={17} /><span>运行</span><small>持续演化、时间控制与检查点</small>
+    </button>
+    <button aria-label="旧版兼容：隔离查看步骤 1 静态宇宙" disabled={disabled} type="button" title="隔离查看步骤 1 静态宇宙" onClick={onOpenLegacy}>
+      <BookOpen size={17} /><span>旧版兼容</span><small>隔离查看步骤 1 静态宇宙</small>
+    </button>
+  </nav>;
 }

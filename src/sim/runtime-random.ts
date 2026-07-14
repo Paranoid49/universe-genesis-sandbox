@@ -1,5 +1,6 @@
 import {
   RUNTIME_RANDOM_STATE_VERSION,
+  type RuntimeRandomDecision,
   type RuntimeRandomState,
 } from "./contracts/runtime";
 import { randomHashToUint32, randomSeedFingerprint } from "./random";
@@ -10,6 +11,7 @@ export type RuntimeRandomStream = {
   readonly streamId: string;
   readonly namespace: string;
   readonly sampleCount: number;
+  readonly lastDecision: RuntimeRandomDecision | undefined;
   next: () => number;
   int: (min: number, max: number) => number;
   bool: (chance: number) => boolean;
@@ -22,6 +24,7 @@ export function createRuntimeRandomStream(seed: string, namespace: string, saved
   if (saved) assertRuntimeRandomState(saved, { namespace, seedFingerprint, streamId });
   let state = saved?.state ?? randomHashToUint32(`${seed}::${namespace}`);
   let sampleCount = saved?.sampleCount ?? 0;
+  let lastDecision: RuntimeRandomDecision | undefined;
 
   const sample = () => {
     sampleCount += 1;
@@ -38,14 +41,27 @@ export function createRuntimeRandomStream(seed: string, namespace: string, saved
     get sampleCount() {
       return sampleCount;
     },
-    next: sample,
+    get lastDecision() {
+      return lastDecision;
+    },
+    next: () => {
+      const sampleValue = sample();
+      lastDecision = runtimeDecision(streamId, namespace, sampleCount, sampleValue, "next", {}, sampleValue);
+      return sampleValue;
+    },
     int: (min, max) => {
       if (!Number.isSafeInteger(min) || !Number.isSafeInteger(max) || max < min) throw new Error("随机整数范围无效。");
-      return Math.floor(min + (max - min + 1) * sample());
+      const sampleValue = sample();
+      const selected = Math.floor(min + (max - min + 1) * sampleValue);
+      lastDecision = runtimeDecision(streamId, namespace, sampleCount, sampleValue, "int", { min, max }, selected);
+      return selected;
     },
     bool: (chance) => {
       if (!Number.isFinite(chance) || chance < 0 || chance > 1) throw new Error("随机布尔概率必须位于 0 到 1 之间。");
-      return sample() < chance;
+      const sampleValue = sample();
+      const selected = sampleValue < chance;
+      lastDecision = runtimeDecision(streamId, namespace, sampleCount, sampleValue, "bool", { chance }, selected);
+      return selected;
     },
     snapshot: () => Object.freeze({
       version: RUNTIME_RANDOM_STATE_VERSION,
@@ -57,6 +73,27 @@ export function createRuntimeRandomStream(seed: string, namespace: string, saved
       sampleCount,
     }),
   };
+}
+
+function runtimeDecision(
+  streamId: string,
+  namespace: string,
+  sampleIndex: number,
+  sampleValue: number,
+  operation: RuntimeRandomDecision["operation"],
+  parameters: Record<string, number>,
+  selected: unknown,
+): RuntimeRandomDecision {
+  return Object.freeze({
+    id: `${streamId}:${sampleIndex}`,
+    streamId,
+    namespace,
+    sampleIndex,
+    sampleValue,
+    operation,
+    parameters: Object.freeze({ ...parameters }),
+    selectedValue: String(selected),
+  });
 }
 
 function assertRuntimeRandomState(

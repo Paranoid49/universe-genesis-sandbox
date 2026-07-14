@@ -126,7 +126,7 @@ describe("规则与因果契约版本门禁", () => {
     const actualHash = rulesetContentHash(sourceRoot);
 
     if (actualHash !== expectedRulesetContentHash) {
-      throw new Error(`模拟核心内容哈希已变化。若领域结果变化，请更新 RULESET_VERSION 与 RULESET_SHORT_CODE；若仅因果证据契约变化，请更新 CAUSAL_GRAPH_VERSION；随后更新该测试基线。当前哈希：${actualHash}`);
+      throw new Error(`模拟核心内容哈希已变化。若旧领域结果变化，请更新 RULESET_VERSION 与 RULESET_SHORT_CODE；若因果证据契约变化，请更新 CAUSAL_GRAPH_VERSION；若运行时语义变化，请更新对应运行时契约版本；随后更新该测试基线。当前哈希：${actualHash}`);
     }
 
     expect(actualHash).toBe(expectedRulesetContentHash);

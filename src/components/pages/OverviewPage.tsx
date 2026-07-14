@@ -3,7 +3,7 @@ import type { UniverseSummary } from "../../sim";
 import { metricName, signed } from "../../ui/labels";
 import type { CivilizationStats, SpaceStats } from "../../ui/selectors";
 import { topInfluences } from "../../ui/selectors";
-import type { AppPageId } from "../../ui/useUniverseAppModel";
+import type { AppPageId } from "../../ui/appPages";
 import { ResultValue, SectionHeader, TraceCauseButton } from "../common";
 
 export function OverviewPage({

@@ -17,9 +17,45 @@ import { interactionKindName, metricName, miracleOveruseLevelName, miracleTypeNa
 
 describe("应用关键交互", () => {
   beforeEach(() => window.localStorage.clear());
-  it("可以通过主导航进入星系与文明页面", async () => {
+  it("默认主流程只启动运行中宇宙并可隔离进入旧版后返回", async () => {
     const user = userEvent.setup();
     render(<App />);
+
+    expect(screen.getByRole("heading", { name: "运行中宇宙" })).toBeTruthy();
+    expect(screen.queryByLabelText("创世总览")).toBeNull();
+    expect(screen.queryByRole("button", { name: "复制分享" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "单步推进" }));
+    expect(screen.getByText("第 1 步")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: /旧版兼容/ }));
+    expect(screen.getByLabelText("旧版隔离兼容说明")).toBeTruthy();
+    expect(screen.getByLabelText("创世总览")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "返回运行中宇宙" }));
+    expect(screen.getByRole("heading", { name: "运行中宇宙" })).toBeTruthy();
+    expect(screen.getByText("第 1 步")).toBeTruthy();
+    expect(screen.getByText("已暂停")).toBeTruthy();
+  });
+
+  it("只有可识别的旧分享查询才进入旧版兼容流程", () => {
+    const cases = [
+      { search: "", legacy: false },
+      { search: "?utm_source=test", legacy: false },
+      { search: "?iv=1&i=broken", legacy: false },
+      { search: "?s=LEGACY-SEED&t=HS&v=UGS070", legacy: true },
+      { search: "?utm_source=test&s=LEGACY-SEED&t=HS&v=UGS070&iv=1&i=broken", legacy: true },
+    ];
+
+    for (const entry of cases) {
+      const view = render(<App search={entry.search} />);
+      expect(Boolean(screen.queryByLabelText("旧版隔离兼容说明"))).toBe(entry.legacy);
+      expect(Boolean(screen.queryByRole("heading", { name: "运行中宇宙" }))).toBe(!entry.legacy);
+      view.unmount();
+    }
+  });
+
+  it("可以通过主导航进入星系与文明页面", async () => {
+    const user = userEvent.setup();
+    render(<App initialPage="overview" />);
 
     await user.click(screen.getByRole("button", { name: /星系、恒星系与行星/ }));
     expect(screen.getByRole("heading", { name: "局部探索" })).toBeTruthy();
@@ -38,7 +74,7 @@ describe("应用关键交互", () => {
 
   it("可以通过一级入口用键盘完成真实宇宙的双向因果查询", async () => {
     const user = userEvent.setup();
-    const { container } = render(<App />);
+    const { container } = render(<App initialPage="overview" />);
     const causalityNavigation = screen.getByRole("button", { name: /结果、原因与影响链路/ });
 
     causalityNavigation.focus();
@@ -73,7 +109,7 @@ describe("应用关键交互", () => {
 
   it("主要旧页面的可见结果可以就地追因并返回原页面继续浏览", async () => {
     const user = userEvent.setup();
-    const { container } = render(<App />);
+    const { container } = render(<App initialPage="overview" />);
 
     async function traceAndReturn(button: HTMLElement, pageHeading: string) {
       await user.click(button);
@@ -317,7 +353,7 @@ describe("应用关键交互", () => {
 
   it("概览快捷入口可以进入星系和文明页面", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    render(<App initialPage="overview" />);
     await user.click(screen.getByTitle("查看代表性星系"));
     expect(screen.getByRole("heading", { name: "局部探索" })).toBeTruthy();
     await user.click(screen.getByTitle("宇宙摘要与指标"));
@@ -607,7 +643,7 @@ describe("应用关键交互", () => {
 
   it("空 Seed 会显示错误并保留当前宇宙，修正后可以继续创世", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    render(<App initialPage="overview" />);
     const universeName = document.querySelector(".universe-title h2")?.textContent;
     const seedInput = screen.getByRole("textbox", { name: "Seed" });
     await user.clear(seedInput);
@@ -623,7 +659,7 @@ describe("应用关键交互", () => {
 
   it("随机 Seed 会更新输入并生成新宇宙", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    render(<App initialPage="overview" />);
     const seedInput = screen.getByRole("textbox", { name: "Seed" }) as HTMLInputElement;
     const before = seedInput.value;
     await user.click(screen.getByRole("button", { name: "随机" }));
@@ -635,7 +671,7 @@ describe("应用关键交互", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     const user = userEvent.setup();
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
-    render(<App />);
+    render(<App initialPage="overview" />);
     await user.click(screen.getByRole("button", { name: "复制分享" }));
     expect(await screen.findByRole("button", { name: "已复制" })).toBeTruthy();
     expect(writeText).toHaveBeenCalledOnce();
@@ -646,7 +682,7 @@ describe("应用关键交互", () => {
     const user = userEvent.setup();
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
     const prompt = vi.spyOn(window, "prompt").mockReturnValue("");
-    render(<App />);
+    render(<App initialPage="overview" />);
     await user.click(screen.getByRole("button", { name: "复制分享" }));
     expect(await screen.findByRole("button", { name: "已打开复制框" })).toBeTruthy();
     expect(prompt).toHaveBeenCalledOnce();

@@ -23,23 +23,20 @@ import { useCausalViewController } from "./causalView";
 import { useLawComparisonModel } from "./useLawComparisonModel";
 import { useShareController } from "./useShareController";
 import { useUniverseSelection } from "./useUniverseSelection";
+import type { AppPageId } from "./appPages";
 
 const DEFAULT_SEED = "LUX-7F3A-91C2";
 const DEFAULT_TEMPLATE_ID: UniverseTemplateId = "high_magic";
-
-export type AppPageId = "overview" | "causality" | "observe" | "space" | "civilizations" | "miracles" | "timeline" | "laws" | "logs" | "library";
+export type { AppPageId } from "./appPages";
 
 export type { MiracleTargetOption } from "./miracleTargets";
 
-type UseUniverseAppModelInput = {
-  initialPage?: AppPageId;
-  search?: string;
-};
+type UseUniverseAppModelInput = { initialPage?: AppPageId; search?: string; initialSeed?: string; initialTemplateId?: UniverseTemplateId };
 
-export function useUniverseAppModel({ initialPage = "overview", search }: UseUniverseAppModelInput = {}) {
+export function useUniverseAppModel({ initialPage = "runtime", search, initialSeed: providedSeed, initialTemplateId: providedTemplateId }: UseUniverseAppModelInput = {}) {
   const initialShare = useMemo(() => readInitialShare(search), [search]);
-  const initialSeed = initialShare?.seed ?? DEFAULT_SEED;
-  const initialTemplate = initialShare?.templateId ?? DEFAULT_TEMPLATE_ID;
+  const initialSeed = initialShare?.seed ?? providedSeed ?? DEFAULT_SEED;
+  const initialTemplate = initialShare?.templateId ?? providedTemplateId ?? DEFAULT_TEMPLATE_ID;
   const [draftSeed, setDraftSeed] = useState(formatSeed(initialSeed));
   const [activeSeed, setActiveSeed] = useState(normalizeSeed(initialSeed));
   const [templateId, setTemplateId] = useState<UniverseTemplateId>(initialTemplate);
@@ -166,6 +163,7 @@ export function useUniverseAppModel({ initialPage = "overview", search }: UseUni
     activePage: causalViewController.activePage,
     contentPage: causalViewController.contentPage,
     applySelectedMiracle,
+    activeSeed,
     causalView: causalViewController.causalView,
     traceError: causalTraceError,
     civilizationStats,

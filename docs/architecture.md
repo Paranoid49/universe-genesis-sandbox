@@ -1,17 +1,27 @@
 # 架构说明
 
-状态：新产品步骤 1 当前实施架构，自动化门禁已有本轮执行记录，严格架构评审尚未通过。
+状态：步骤 1 和步骤 2 已完成；步骤 2 的有效 P0、P1 已关闭，P2 均已明确处置；步骤 3 验收基线已冻结，尚未实现。
+
+步骤 2 当前发布快照：模拟测试 126 项；模拟覆盖率 92.53%／83.8%／94.93%／96.19%；UI 测试 66 项；UI 覆盖率 89.72%／82.08%／91.37%／93.02%；独立性能测试 3 项；E2E 62 项通过、2 项跳过；JavaScript gzip 96633 字节；CSS gzip 6080 字节。
+步骤 2 当前定向测试组成：步骤 2 核心契约 19 项；步骤 2 架构 3 项；步骤 2 UI 与存储 22 项；步骤 2 性能 2 项；步骤 2 四浏览器纵向闭环 8 项；合计 54 项。
 
 本文件描述当前工作区中的实际可运行实现。目标产品边界以 [产品定义](product-definition.md) 为准，实施顺序以 [产品重构实施路线](milestones.md) 为准，旧模块去留以 [旧产品模块迁移矩阵](legacy-module-migration.md) 为准。
 
-当前产品仍使用旧的一次性静态生成流水线，但步骤 1 已在其输出之上建立统一因果契约、随机追踪、闭包校验和双向查询入口。该兼容架构用于完成因果换轨，不是步骤 2 之后继续扩展静态 `UniverseSummary` 的依据。
+当前默认产品主流程只装配运行中宇宙，不再生成或消费完整旧 `UniverseSummary`。步骤 1 的静态宇宙、旧分享、旧页面和 A1 图书馆按需装配在明确标识的“旧版隔离兼容视图”中，不得成为运行状态、事件、指标或存档的事实来源。
 
-步骤 2 已冻结验收基线并开始建立新运行时基础。`src/sim/contracts/runtime.ts` 当前定义独立版本的 `UniverseState`、逻辑时钟、状态转换、状态差异、持久对象和可恢复随机流状态；`src/sim/runtime-clock.ts` 提供不读取墙上时间的不可变时钟；`src/sim/runtime-random.ts` 提供可序列化内部状态与游标的独立随机流。上述模块尚未接管产品主流程，当前 `UniverseSummary` 静态兼容流仍只服务步骤 1 已完成产品，不能据此认定步骤 2 已形成运行闭环。
+步骤 2 运行时由独立版本的宇宙定义、`UniverseState`、逻辑时钟、状态转换、状态差异、持久对象、可恢复随机流、运行因果网络和运行存档组成。事件只从已提交差异投影，历史游标只投影过去对象，浏览器完整运行数据只经 IndexedDB 存储适配器访问。
 
 ## 1. 分层边界
 
 ```text
 src/sim/contracts/causality.ts  因果图、节点、边、根、随机引用与校验问题的稳定契约
+src/sim/contracts/runtime.ts    宇宙定义、运行状态、时钟、转换、差异、事件、存档与存储适配器契约
+src/sim/runtime-state.ts        唯一运行事实、持久对象、状态转换与状态身份
+src/sim/runtime-random.ts       可恢复随机流、内部状态、游标与精确随机决定
+src/sim/runtime-events.ts       从已提交状态差异生成只读事件投影
+src/sim/runtime-history.ts      不改写当前状态的历史对象投影
+src/sim/runtime-causality.ts    运行转换、差异、规则、输入、随机与事件的双向因果网络
+src/sim/runtime-archive.ts      版本化运行存档、校验和、拒绝错误码与恢复
 src/sim/contracts/causal-comparison.ts 跨宇宙比较组合证据契约
 src/sim/random.ts               确定性 PRNG、命名随机流与共享追踪快照
 src/sim/causality-generation.ts 规范化显式输入清单、生成身份与输入根校验
@@ -26,7 +36,11 @@ src/ui/causalView.ts            单一因果查询会话、投影按需追加与
 src/ui/observationCausalProjection.ts 观察摘要、几何、强度和事件关联的原因映射
 src/ui/lawComparisonCausalProjection.ts 组合证据校验后的左右独立因果投影
 src/ui                          页面状态、旧派生选择器和浏览器交互
+src/ui/runtimeStorage.ts        IndexedDB 与内存运行存储适配器
+src/ui/useRuntimeUniverseModel.ts 运行控制、历史游标、存档任务串行化与连续运行预算
 src/components                  展示组件与因果查询界面
+src/components/RuntimeApplication.tsx 默认运行产品壳，不依赖旧静态生成器
+src/components/LegacyApplication.tsx 按需装配的步骤 1 隔离兼容查看器
 src/components/causalExplorerModel.ts 因果界面的纯查询模型、路径枚举和中文标签
 src/App.tsx                     页面装配入口
 tests                           永久不变量、步骤契约、旧兼容、UI 与 E2E 验收
@@ -36,12 +50,10 @@ docs                            当前事实来源、迁移证据与退役登记
 依赖方向必须保持单向：
 
 ```text
-content / recipes / contracts
-            -> 旧领域生成器
-            -> universe 兼容编排
-            -> causality 构建与查询
-            -> ui / components
-            -> App
+runtime contracts -> clock / random / state -> events / history / causality / archive
+                                               -> runtime ui / RuntimeApplication
+legacy content / recipes / contracts -> 旧领域生成器 -> legacy causality -> LegacyApplication
+RuntimeApplication + LegacyApplication -> App 模式边界
 ```
 
 具体约束如下：
@@ -52,7 +64,29 @@ content / recipes / contracts
 - `src/App.tsx` 只装配页面，不实现生成规则、因果算法或存档协议。
 - `src/sim/contracts/**` 只保存稳定契约，不反向依赖聚合 UI 类型。
 
-## 2. 当前生成与因果数据流
+## 2. 当前运行与兼容数据流
+
+默认运行数据流如下：
+
+```text
+显式 Seed + 旧模板兼容预设 + 规则版本
+  -> UniverseDefinition
+  -> 初始 UniverseState + SimulationClock + RandomStreamState
+  -> 有序 TransitionInput
+  -> 规则校验 + 可恢复随机决定
+  -> StateDiff 完整提交
+  -> 新 UniverseState + 状态哈希 + 转换历史
+  -> RuntimeEvent 只读投影
+  -> RuntimeCausalNetwork 双向查询
+  -> RuntimeArchiveEnvelope 完整性校验
+  -> RuntimeStorageAdapter / IndexedDB
+```
+
+`UniverseState` 是新运行时唯一事实来源。规则、对象、随机流、输入日志和已提交转换均包含在不可变状态中；事件、历史对象、指标说明和界面缓存删除后可以重新投影。保存与恢复任务串行执行，运行期间进入存档任务会停止新的时间步调度，失败不会先提交内存成功状态。
+
+连续运行每次最多自动提交 100 个确定性时间步，达到预算后自动暂停并给出可见说明。玩家可以确认后再次启动；预算只限制调度批次，不跳过转换、不合并因果记录，也不改变相同输入下的状态序列。
+
+旧兼容生成边界仍提供两个用途不同的公共入口：
 
 当前生成边界提供两个用途不同的公共入口：
 
@@ -81,7 +115,7 @@ seed + templateId + rulesetVersion + ordered InterventionInput[]
 
 因果图是旧领域结果的结构化只读投影，不反向修改法则、指标、事件、对象、干预、分享或存档数据。`causalGraph` 是不可配置、非枚举的只读 getter，避免 JSON、A1 和旧字段比较把整张图误当成旧存档载荷；首次物化后缓存同一实例。图及其节点、边、闭环授权、随机流、决策记录和嵌套数组均在运行时冻结，不能依赖 TypeScript 的只读声明而被外部代码修改。
 
-步骤 2 必须用 `UniverseState`、模拟时钟、状态转换和可继续随机流替换一次性事实来源。届时事件由状态差异产生，`timelineImpact` 不得继续反向创造世界对象。
+上述旧生成流只在 `LegacyApplication` 中按需装配。`App.tsx`、`RuntimeApplication.tsx` 和 `RuntimePage.tsx` 均有架构门禁禁止依赖 `generateUniverse`、`generateCausalUniverse`、`useUniverseAppModel`、`UniverseSummary` 或 `timelineImpact`。
 
 ## 3. 因果契约
 
@@ -145,7 +179,7 @@ seed + templateId + rulesetVersion + ordered InterventionInput[]
 
 完备原因相同时，旧领域字段和因果图都必须完全一致。相同可见状态允许来自不同原因，节点不得仅因标签或显示值相同而合并。
 
-步骤 2 还必须在此基础上增加可序列化 PRNG 内部状态与游标，证明恢复后的下一次抽样与未中断运行一致。当前追踪快照只用于解释和确定性证据，不能冒充可继续运行的随机流存档。
+旧静态因果图中的随机追踪快照只用于解释和确定性证据，不能冒充可继续运行的随机流存档。步骤 2 已由 `runtime-random.ts` 建立独立版本的可序列化 PRNG 内部状态、命名流身份、游标和抽样序号，并通过恢复后下一次抽样及完整转换重放校验。
 
 ## 6. 查询与闭包校验
 
@@ -200,14 +234,14 @@ seed + templateId + rulesetVersion + ordered InterventionInput[]
 
 `UniverseSummary` 在步骤 1 仍是旧界面的兼容读取模型。非枚举、运行时冻结的 `causalGraph` 不能让它重新成为未来事实聚合中心，也不能被 A1、分享 JSON 或旧字段序列化隐式携带。
 
-以下旧路径暂时保持可运行：
+以下旧路径只在明确标识的“旧版隔离兼容视图”中保持可运行：
 
 - Seed 与固定模板创世。
 - 概览、观察台、传统空间、文明、奇迹、纪元、法则、日志和图书馆页面。
 - UGS070 分享码、I1 干预载荷与 current-only 恢复。
 - A1 `localStorage` 图书馆及 JSON 导入导出。
 
-这些路径的存在只表示步骤 1 的兼容承诺。步骤 2 至步骤 7 必须按迁移矩阵替换或降级，不能用“已有因果图”为理由保留旧产品主流程。
+默认启动、主导航、运行控制、历史浏览和运行存档均不依赖上述路径。旧分享查询会直接进入隔离兼容视图，不会自动升级为等价运行历史；离开运行页进入兼容视图前，连续运行会暂停并释放计时器。
 
 样式当前按六个入口拆分，并保持以下加载顺序：
 
@@ -216,6 +250,7 @@ styles.css
 styles-simulation.css
 styles-causality.css
 styles-features.css
+styles-runtime.css
 styles-responsive.css
 styles-causality-responsive.css
 ```
@@ -239,11 +274,17 @@ styles-causality-responsive.css
 
 ```text
 tests/step-1-causality.test.ts       步骤 1 因果契约、覆盖、确定性与负向校验
+tests/step-2-runtime.test.ts         步骤 2 状态、时钟、随机恢复、事件、历史、存档与运行因果契约
+tests/step-2-architecture.test.ts    步骤 2 主流程隔离、墙上时间与旧链路依赖门禁
 tests/causality-factory-guards.test.ts 生产工厂随机调用与绑定转录守卫
 tests/ui/causal-explorer.test.tsx    因果组件、路径、键盘与 axe
 tests/ui/causal-projection-integration.test.tsx 观察与 Seed 对比投影、按点击追加和左右独立查询
 tests/ui/app-interaction.test.tsx    真实应用入口与旧基线 UI 兼容
+tests/ui/runtime-page.test.tsx       运行控制、历史游标、资源预算、存档与运行因果界面
+tests/ui/runtime-storage.test.tsx    运行存储原子性、并发检查点与 IndexedDB 适配器
 tests/e2e/app.spec.ts                真实浏览器因果闭环与发布级兼容
+tests/performance/runtime.performance.ts 步骤 2 单步、一百步、快照与恢复预算
+tests/performance/runtime-pause.performance.ts 步骤 2 各运行速度暂停调度预算
 tests/phase-1.test.ts ... phase-8    旧基线兼容，按退役登记逐步退出
 tests/architecture.test.ts           依赖方向、浏览器边界与文件规模
 tests/helpers.ts                     旧兼容断言与共享测试工具

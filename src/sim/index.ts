@@ -40,15 +40,47 @@ export {
 } from "./runtime-clock";
 export { createRuntimeRandomStream, RUNTIME_RANDOM_ALGORITHM_VERSION } from "./runtime-random";
 export type { RuntimeRandomStream } from "./runtime-random";
+export { advanceUniverseState, configureUniverseClock, createInitialUniverseState, runtimeStateFingerprint } from "./runtime-state";
+export { assertUniverseStateSemantics } from "./runtime-state-validation";
+export { restoreUniverseState } from "./runtime-state";
+export type { CreateUniverseStateInput } from "./runtime-state";
+export { projectRuntimeEvents } from "./runtime-events";
+export { runtimeObjectAtTick } from "./runtime-history";
+export {
+  buildRuntimeCausalNetwork,
+  runtimeDirectCauses,
+  runtimeDirectEffects,
+  validateRuntimeCausalNetwork,
+} from "./runtime-causality";
+export type { RuntimeCausalValidationIssue, RuntimeCausalValidationIssueCode } from "./runtime-causality";
+export {
+  createRuntimeArchive,
+  parseRuntimeArchive,
+  restoreRuntimeArchive,
+  RuntimeArchiveError,
+  serializeRuntimeArchive,
+} from "./runtime-archive";
+export type { RuntimeArchiveErrorCode } from "./runtime-archive";
 export {
   RUNTIME_RANDOM_STATE_VERSION,
+  RUNTIME_ARCHIVE_VERSION,
   SIMULATION_CLOCK_VERSION,
   STATE_TRANSITION_VERSION,
+  UNIVERSE_DEFINITION_VERSION,
   UNIVERSE_STATE_VERSION,
 } from "./contracts/runtime";
 export type {
   RuntimeObjectStatus,
+  RuntimeArchiveEnvelope,
+  RuntimeCausalEdge,
+  RuntimeCausalNetwork,
+  RuntimeCausalNode,
+  RuntimeCausalNodeKind,
+  RuntimeEvent,
   RuntimeRandomState,
+  RuntimeRandomDecision,
+  RuntimeRule,
+  RuntimeStorageAdapter,
   RuntimeWorldObject,
   SimulationClock,
   SimulationRunStatus,
@@ -56,6 +88,7 @@ export type {
   StateDiffOperation,
   StateTransition,
   TransitionInput,
+  UniverseDefinition,
   UniverseRuntimeIdentity,
   UniverseState,
 } from "./contracts/runtime";
