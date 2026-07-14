@@ -28,6 +28,7 @@ import type {
 import {
   civilizationEventWeight,
   civilizationFate,
+  civilizationPathQualification,
   civilizationPathWeight,
   type CivilizationRecipeValues,
 } from "./recipes/civilization";
@@ -44,23 +45,18 @@ type CivilizationCandidate = {
   system: StarSystem;
   planet: Planet;
 };
-
 type CivilizationValues = CivilizationRecipeValues;
-
 export function generateCivilizations(context: CivilizationGenerationContext, rng: RandomStream): Civilization[] {
   const candidates = civilizationCandidates(context.galaxies);
   return candidates.map((candidate, index) => generateCivilization(context, candidate, rng.fork(`civilization.${candidate.planet.id}`), index + 1));
 }
-
 function generateCivilization(context: CivilizationGenerationContext, candidate: CivilizationCandidate, rng: RandomStream, index: number): Civilization {
   const seed = candidate.planet.biosphere?.civilizationSeed;
-  if (!seed) {
-    throw new Error("文明生成必须来自 Biosphere.civilizationSeed。");
-  }
-
-  const values = civilizationValues(context, candidate, rng);
-  const path = pickCivilizationPath(context, values, rng);
-  const mythology = generateMythology(context, candidate, values, path, rng.fork("mythology"));
+  if (!seed) throw new Error("文明生成必须来自 Biosphere.civilizationSeed。");
+  const id = `civ-${String(index).padStart(2, "0")}`;
+  const values = civilizationValues(context, candidate, rng, id);
+  const path = rng.withScope(`${id}.path`, (scoped) => pickCivilizationPath(context, values, scoped));
+  const mythology = generateMythology(context, candidate, values, path, rng.fork("mythology"), id);
   const fate = civilizationFate(path, values, seed.fate);
   const sourceEventIds = uniqueIds([...seed.sourceEventIds, ...candidate.planet.sourceEventIds, ...sourceEvents(context.timelineImpact, 3)]).slice(0, 6);
   const sourceRuleIds = uniqueIds([
@@ -69,7 +65,6 @@ function generateCivilization(context: CivilizationGenerationContext, candidate:
     strongestRuleId(context.laws.divinity),
     strongestRuleId(context.laws.life),
   ]).slice(0, 6);
-  const id = `civ-${String(index).padStart(2, "0")}`;
 
   return {
     id,
@@ -104,18 +99,20 @@ function civilizationCandidates(galaxies: Galaxy[]): CivilizationCandidate[] {
   );
 }
 
-function civilizationValues(context: CivilizationGenerationContext, candidate: CivilizationCandidate, rng: RandomStream): CivilizationValues {
+function civilizationValues(context: CivilizationGenerationContext, candidate: CivilizationCandidate, rng: RandomStream, civilizationId: string): CivilizationValues {
   const seed = candidate.planet.biosphere?.civilizationSeed;
-  if (!seed) {
-    throw new Error("文明数值生成必须来自文明候选种子。");
-  }
+  if (!seed) throw new Error("文明数值生成必须来自文明候选种子。");
   const localCivilization = biasValue(context.timelineImpact, "civilizationSeedChance");
   const divineRelic = biasValue(context.timelineImpact, "divineRelicDensity");
   const causalHazard = biasValue(context.timelineImpact, "causalHazardLevel");
-  const technologyLevel = round(clamp(seed.technologyLevel * 0.62 + context.metrics.civilizationPotential.value * 0.18 + candidate.system.stability * 0.12 + rng.range(-7, 7)));
-  const magicLevel = round(clamp(seed.magicLevel * 0.62 + context.metrics.magicIntensity.value * 0.18 + candidate.planet.magicSaturation * 0.16 + rng.range(-7, 7)));
-  const faithIntensity = round(clamp(seed.faithIntensity * 0.56 + context.metrics.divineActivity.value * 0.22 + divineRelic * 0.16 + rng.range(-8, 8)));
-  const expansionDrive = round(clamp(seed.expansionDrive * 0.6 + context.metrics.civilizationPotential.value * 0.18 + localCivilization * 0.16 + rng.range(-7, 7)));
+  const technologyLevel = round(clamp(seed.technologyLevel * 0.62 + context.metrics.civilizationPotential.value * 0.18 + candidate.system.stability * 0.12
+    + rng.withScope(`${civilizationId}.technologyLevel`, (scoped) => scoped.range(-7, 7))));
+  const magicLevel = round(clamp(seed.magicLevel * 0.62 + context.metrics.magicIntensity.value * 0.18 + candidate.planet.magicSaturation * 0.16
+    + rng.withScope(`${civilizationId}.magicLevel`, (scoped) => scoped.range(-7, 7))));
+  const faithIntensity = round(clamp(seed.faithIntensity * 0.56 + context.metrics.divineActivity.value * 0.22 + divineRelic * 0.16
+    + rng.withScope(`${civilizationId}.faithIntensity`, (scoped) => scoped.range(-8, 8))));
+  const expansionDrive = round(clamp(seed.expansionDrive * 0.6 + context.metrics.civilizationPotential.value * 0.18 + localCivilization * 0.16
+    + rng.withScope(`${civilizationId}.expansionDrive`, (scoped) => scoped.range(-7, 7))));
   const stability = round(
     clamp(
       seed.stability * 0.46 +
@@ -123,10 +120,11 @@ function civilizationValues(context: CivilizationGenerationContext, candidate: C
         candidate.system.stability * 0.16 +
         candidate.planet.stability * 0.16 -
         causalHazard * 0.06 +
-        rng.range(-8, 8),
+        rng.withScope(`${civilizationId}.stability`, (scoped) => scoped.range(-8, 8)),
     ),
   );
-  const extinctionRisk = round(clamp(78 - stability * 0.65 + causalHazard * 0.18 + candidate.galaxy.causalHazard * 0.12 - context.metrics.causalityIntegrity.value * 0.18 + rng.range(-8, 8)));
+  const extinctionRisk = round(clamp(78 - stability * 0.65 + causalHazard * 0.18 + candidate.galaxy.causalHazard * 0.12 - context.metrics.causalityIntegrity.value * 0.18
+    + rng.withScope(`${civilizationId}.extinctionRisk`, (scoped) => scoped.range(-8, 8))));
 
   return { technologyLevel, magicLevel, faithIntensity, expansionDrive, stability, extinctionRisk };
 }
@@ -135,11 +133,14 @@ function pickCivilizationPath(context: CivilizationGenerationContext, values: Ci
   const consciousness = context.laws.consciousness.rating.value;
   const divinity = context.laws.divinity.rating.value;
   const magic = context.laws.magic.rating.value;
-  const weights = civilizationPathProfiles.filter((profile) => pathIsEligible(profile.id, values, { consciousness, divinity, magic })).map((profile) => ({
-    item: profile.id,
-    weight: civilizationPathWeight(profile, values, { consciousness, divinity, magic }) + pathSituationBoost(profile.id, values),
-  }));
-  return rng.weighted(weights);
+  const weights = civilizationPathProfiles.map((profile) => {
+    const eligible = pathIsEligible(profile.id, values, { consciousness, divinity, magic });
+    return {
+      item: { id: profile.id, eligible, qualification: civilizationPathQualification(profile.id) },
+      weight: eligible ? civilizationPathWeight(profile, values, { consciousness, divinity, magic }) + pathSituationBoost(profile.id, values) : 0,
+    };
+  });
+  return rng.weighted(weights).id;
 }
 
 function pathIsEligible(
@@ -170,12 +171,15 @@ function generateMythology(
   values: CivilizationValues,
   path: CivilizationPath,
   rng: RandomStream,
+  civilizationId: string,
 ): MythologySystem {
-  const profile = pickMythologyProfile(context, candidate, values, path, rng);
-  const influenceLevel = round(clamp(values.faithIntensity * 0.48 + context.metrics.divineActivity.value * 0.26 + values.magicLevel * 0.14 + profile.divinityBias + rng.range(-6, 6)));
+  const subject = `${civilizationId}.mythology`;
+  const profile = rng.withScope(`${subject}.type`, (scoped) => pickMythologyProfile(context, candidate, values, path, scoped));
+  const influenceLevel = round(clamp(values.faithIntensity * 0.48 + context.metrics.divineActivity.value * 0.26 + values.magicLevel * 0.14 + profile.divinityBias
+    + rng.withScope(`${subject}.influenceLevel`, (scoped) => scoped.range(-6, 6))));
   const sourceEventIds = uniqueIds([...candidate.planet.sourceEventIds, ...sourceEvents(context.timelineImpact, 2)]).slice(0, 5);
   const sourceRuleIds = uniqueIds([strongestRuleId(context.laws.divinity), strongestRuleId(context.laws.consciousness), ...candidate.planet.sourceRuleIds]).slice(0, 5);
-  const deityName = profile.id === "none" ? "无主神" : `${rng.pick(deityNameCores)}-${profile.label}`;
+  const deityName = profile.id === "none" ? "无主神" : `${rng.withScope(`${subject}.deityName`, (scoped) => scoped.pick(deityNameCores))}-${profile.label}`;
 
   return {
     type: profile.id,
@@ -265,28 +269,35 @@ function generateCivilizationEvents(
   },
   rng: RandomStream,
 ): CivilizationEvent[] {
-  const targetCount = rng.int(8, 15);
+  const targetCount = rng.withScope(`civilization:${civilization.id}:history-count`, (scoped) => scoped.int(8, 15));
   const blueprints = seedEventBlueprints(civilization);
 
   while (blueprints.length < targetCount) {
-    blueprints.push(pickEventBlueprint(civilization, rng));
+    const scopeId = civilizationEventScope(civilization.id, blueprints.length);
+    blueprints.push(rng.withScope(scopeId, (scoped) => pickEventBlueprint(civilization, scoped)));
   }
 
   return blueprints.slice(0, targetCount).map((blueprint, index): CivilizationEvent => {
     const id = `${civilization.id}-evt-${String(index + 1).padStart(2, "0")}`;
-    const previous = index > 0 && rng.bool(0.68) ? [`${civilization.id}-evt-${String(index).padStart(2, "0")}`] : [];
-    return {
-      id,
-      ageLabel: `文明纪元 ${index + 1}`,
-      type: blueprint.type,
-      title: rng.pick(blueprint.titles),
-      description: eventDescription(blueprint, civilization),
-      impact: round(clamp(blueprint.baseImpact + eventImpactDelta(blueprint.type, civilization.values) + rng.range(-6, 6), -40, 40)),
-      sourceEventIds: civilization.sourceEventIds,
-      sourceRuleIds: civilization.sourceRuleIds,
-      triggeredByCivilizationEventIds: previous,
-    };
+    return rng.withScope(civilizationEventScope(civilization.id, index), (scoped) => {
+      const previous = index > 0 && scoped.bool(0.68) ? [`${civilization.id}-evt-${String(index).padStart(2, "0")}`] : [];
+      return {
+        id,
+        ageLabel: `文明纪元 ${index + 1}`,
+        type: blueprint.type,
+        title: scoped.pick(blueprint.titles),
+        description: eventDescription(blueprint, civilization),
+        impact: round(clamp(blueprint.baseImpact + eventImpactDelta(blueprint.type, civilization.values) + scoped.range(-6, 6), -40, 40)),
+        sourceEventIds: civilization.sourceEventIds,
+        sourceRuleIds: civilization.sourceRuleIds,
+        triggeredByCivilizationEventIds: previous,
+      };
+    });
   });
+}
+
+function civilizationEventScope(civilizationId: string, zeroBasedIndex: number): string {
+  return `civilization-event:${civilizationId}-evt-${String(zeroBasedIndex + 1).padStart(2, "0")}`;
 }
 
 function seedEventBlueprints(civilization: {

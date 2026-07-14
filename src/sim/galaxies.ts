@@ -45,17 +45,19 @@ export function generateGalaxies(context: SpaceGenerationContext, rng: RandomStr
 }
 
 function generateGalaxy(context: SpaceGenerationContext, rng: RandomStream, index: number): Galaxy {
-  const profile = pickGalaxyProfile(context, rng);
+  const id = `gal-${String(index).padStart(2, "0")}`;
+  const profile = rng.withScope(`${id}.type`, (scoped) => pickGalaxyProfile(context, scoped));
   const sourceEventIds = sourceEvents(context.timelineImpact, ["galaxyDensity", "magicAnomalyDensity", "divineRelicDensity", "causalHazardLevel"], 3);
   const sourceRuleIds = [strongestRuleId(context.laws.physics), strongestRuleId(context.laws.magic), strongestRuleId(context.laws.divinity)];
   const mass = round(clamp(48 + biasValue(context.timelineImpact, "galaxyDensity") * 0.35 + profile.massBias + rng.range(-12, 12)));
   const metallicity = round(clamp(42 + context.metrics.lifePotential.value * 0.18 + profile.metallicityBias + rng.range(-10, 10)));
   const magicFlux = round(clamp(context.metrics.magicIntensity.value * 0.55 + biasValue(context.timelineImpact, "magicAnomalyDensity") * 0.32 + profile.magicBias + rng.range(-9, 9)));
   const divineResidue = round(clamp(context.metrics.divineActivity.value * 0.55 + biasValue(context.timelineImpact, "divineRelicDensity") * 0.35 + profile.divineBias + rng.range(-8, 8)));
-  const causalHazard = round(clamp((100 - context.metrics.causalityIntegrity.value) * 0.42 + biasValue(context.timelineImpact, "causalHazardLevel") * 0.45 + profile.hazardBias + rng.range(-8, 8)));
-  const systemCount = round(clamp(3 + mass / 24 + rng.int(0, 2), 3, 8));
+  const causalHazard = round(clamp((100 - context.metrics.causalityIntegrity.value) * 0.42 + biasValue(context.timelineImpact, "causalHazardLevel") * 0.45 + profile.hazardBias
+    + rng.withScope(`${id}.causalHazard`, (scoped) => scoped.range(-8, 8))));
+  const systemCount = round(clamp(3 + mass / 24 + rng.withScope(`${id}.starSystems.count`, (scoped) => scoped.int(0, 2)), 3, 8));
   const galaxy: Omit<Galaxy, "starSystems"> = {
-    id: `gal-${String(index).padStart(2, "0")}`,
+    id,
     name: `${rng.pick(galaxyNameCores)}-${profile.label}`,
     type: profile.id,
     mass,
@@ -76,15 +78,18 @@ function generateGalaxy(context: SpaceGenerationContext, rng: RandomStream, inde
 }
 
 function generateStarSystem(context: SpaceGenerationContext, galaxy: Omit<Galaxy, "starSystems">, rng: RandomStream, index: number): StarSystem {
-  const profile = pickStarSystemProfile(context, galaxy, rng);
+  const id = `${galaxy.id}-sys-${String(index).padStart(2, "0")}`;
+  const profile = rng.withScope(`${id}.type`, (scoped) => pickStarSystemProfile(context, galaxy, scoped));
   const sourceEventIds = uniqueIds([...galaxy.sourceEventIds, ...sourceEvents(context.timelineImpact, ["stellarStability", "causalHazardLevel"], 2)]);
   const sourceRuleIds = uniqueIds([strongestRuleId(context.laws.physics), strongestRuleId(context.laws.causality), ...galaxy.sourceRuleIds]).slice(0, 4);
   const stability = round(clamp(context.metrics.stability.value * 0.45 + biasValue(context.timelineImpact, "stellarStability") * 0.45 + profile.stabilityBias - galaxy.causalHazard * 0.18 + rng.range(-10, 10)));
-  const luminosity = round(clamp(44 + galaxy.mass * 0.25 + profile.luminosityBias + rng.range(-12, 12)));
+  const luminosity = round(clamp(44 + galaxy.mass * 0.25 + profile.luminosityBias
+    + rng.withScope(`${id}.luminosity`, (scoped) => scoped.range(-12, 12))));
   const anomalyLevel = round(clamp(galaxy.magicFlux * 0.35 + galaxy.causalHazard * 0.35 + profile.anomalyBias + rng.range(-8, 8)));
-  const planetCount = round(clamp(2 + stability / 26 + galaxy.metallicity / 35 + rng.int(0, 2), 2, 6));
+  const planetCount = round(clamp(2 + stability / 26 + galaxy.metallicity / 35
+    + rng.withScope(`${id}.planets.count`, (scoped) => scoped.int(0, 2)), 2, 6));
   const system: Omit<StarSystem, "planets"> = {
-    id: `${galaxy.id}-sys-${String(index).padStart(2, "0")}`,
+    id,
     name: `${rng.pick(starSystemNameCores)}-${profile.label}`,
     type: profile.id,
     starClass: pickStarClass(profile, rng),
@@ -110,7 +115,8 @@ function generatePlanet(
   rng: RandomStream,
   index: number,
 ): Planet {
-  const profile = pickPlanetProfile(context, system, rng);
+  const id = `${system.id}-pl-${String(index).padStart(2, "0")}`;
+  const profile = rng.withScope(`${id}.type`, (scoped) => pickPlanetProfile(context, system, scoped));
   const orbitZone = index === 1 ? "inner" : index <= 3 ? "habitable" : "outer";
   const orbitHabitability = orbitZone === "habitable" ? 12 : orbitZone === "inner" ? -8 : -10;
   const sourceEventIds = uniqueIds([...system.sourceEventIds, ...sourceEvents(context.timelineImpact, ["planetHabitability", "biosphereChance"], 2)]).slice(0, 4);
@@ -122,15 +128,19 @@ function generatePlanet(
         system.stability * 0.22 +
         profile.habitabilityBias +
         orbitHabitability +
-        rng.range(-12, 12),
+        rng.withScope(`${id}.habitability`, (scoped) => scoped.range(-12, 12)),
     ),
   );
-  const magicSaturation = round(clamp(galaxy.magicFlux * 0.4 + system.anomalyLevel * 0.28 + profile.magicBias + rng.range(-10, 10)));
-  const atmosphere = round(clamp(42 + profile.atmosphereBias + system.stability * 0.12 + rng.range(-18, 18)));
-  const water = round(clamp(38 + profile.waterBias + biasValue(context.timelineImpact, "biosphereChance") * 0.18 + rng.range(-18, 18)));
-  const stability = round(clamp(system.stability * 0.62 + profile.stabilityBias - system.anomalyLevel * 0.18 + rng.range(-10, 10)));
+  const magicSaturation = round(clamp(galaxy.magicFlux * 0.4 + system.anomalyLevel * 0.28 + profile.magicBias
+    + rng.withScope(`${id}.magicSaturation`, (scoped) => scoped.range(-10, 10))));
+  const atmosphere = round(clamp(42 + profile.atmosphereBias + system.stability * 0.12
+    + rng.withScope(`${id}.atmosphere`, (scoped) => scoped.range(-18, 18))));
+  const water = round(clamp(38 + profile.waterBias + biasValue(context.timelineImpact, "biosphereChance") * 0.18
+    + rng.withScope(`${id}.water`, (scoped) => scoped.range(-18, 18))));
+  const stability = round(clamp(system.stability * 0.62 + profile.stabilityBias - system.anomalyLevel * 0.18
+    + rng.withScope(`${id}.stability`, (scoped) => scoped.range(-10, 10))));
   const planet: Planet = {
-    id: `${system.id}-pl-${String(index).padStart(2, "0")}`,
+    id,
     name: `${rng.pick(planetNameCores)}-${profile.label}`,
     type: profile.id,
     orbitZone,
@@ -157,21 +167,27 @@ function generateBiosphere(context: SpaceGenerationContext, planet: Planet, rng:
         context.metrics.lifePotential.value * 0.2 +
         planet.magicSaturation * 0.08 -
         Math.max(0, 35 - planet.stability) * 0.35 +
-        rng.range(-14, 14),
+        rng.withScope(`${planet.id}:biosphere-formation`, (scoped) => scoped.range(-14, 14)),
     ),
   );
   if (chance < 42) {
     return undefined;
   }
-  const civilizationChance = round(clamp(chance * 0.35 + biasValue(context.timelineImpact, "civilizationSeedChance") * 0.45 + context.metrics.civilizationPotential.value * 0.18 + rng.range(-10, 10)));
-  const magicAdaptation = round(clamp(planet.magicSaturation * 0.65 + context.metrics.magicIntensity.value * 0.25 + rng.range(-8, 8)));
+  const civilizationChance = round(clamp(chance * 0.35
+    + biasValue(context.timelineImpact, "civilizationSeedChance") * 0.45
+    + context.metrics.civilizationPotential.value * 0.18
+    + rng.withScope(`${planet.id}:civilization-chance`, (scoped) => scoped.range(-10, 10))));
+  const magicAdaptation = round(clamp(planet.magicSaturation * 0.65
+    + context.metrics.magicIntensity.value * 0.25
+    + rng.withScope(`${planet.id}:magic-adaptation`, (scoped) => scoped.range(-8, 8))));
   const level = biosphereLevelFor(chance, civilizationChance, magicAdaptation, planet.type);
   const civilizationSeed = generateCivilizationSeed(context, planet, level, civilizationChance, magicAdaptation, rng.fork("civilization-seed"));
 
   const biosphere: Biosphere = {
     level,
-    dominantForm: rng.pick(biosphereForms),
-    complexity: round(clamp(chance + civilizationChance * 0.2 + rng.range(-8, 8))),
+    dominantForm: rng.withScope(`${planet.id}.biosphere.dominantForm`, (scoped) => scoped.pick(biosphereForms)),
+    complexity: round(clamp(chance + civilizationChance * 0.2
+      + rng.withScope(`${planet.id}.biosphere.complexity`, (scoped) => scoped.range(-8, 8)))),
     magicAdaptation,
     civilizationChance,
     sourceEventIds: planet.sourceEventIds,
@@ -195,11 +211,17 @@ function generateCivilizationSeed(
   if (civilizationChance < 52 || level === "microbial") {
     return undefined;
   }
-  const technologyLevel = round(clamp(civilizationChance * 0.48 + context.metrics.civilizationPotential.value * 0.28 + planet.stability * 0.18 + rng.range(-8, 8)));
-  const magicLevel = round(clamp(magicAdaptation * 0.58 + context.metrics.magicIntensity.value * 0.28 + rng.range(-8, 8)));
-  const faithIntensity = round(clamp(context.metrics.divineActivity.value * 0.45 + biasValue(context.timelineImpact, "divineRelicDensity") * 0.25 + magicAdaptation * 0.18 + rng.range(-10, 10)));
-  const expansionDrive = round(clamp(civilizationChance * 0.34 + context.metrics.civilizationPotential.value * 0.3 + planet.habitability * 0.2 - planet.magicSaturation * 0.06 + rng.range(-8, 8)));
-  const stability = round(clamp(planet.stability * 0.54 + context.metrics.causalityIntegrity.value * 0.24 + context.metrics.stability.value * 0.18 - biasValue(context.timelineImpact, "causalHazardLevel") * 0.18 + rng.range(-8, 8)));
+  const subject = `${planet.id}.civilization-seed`;
+  const technologyLevel = round(clamp(civilizationChance * 0.48 + context.metrics.civilizationPotential.value * 0.28 + planet.stability * 0.18
+    + rng.withScope(`${subject}.technologyLevel`, (scoped) => scoped.range(-8, 8))));
+  const magicLevel = round(clamp(magicAdaptation * 0.58 + context.metrics.magicIntensity.value * 0.28
+    + rng.withScope(`${subject}.magicLevel`, (scoped) => scoped.range(-8, 8))));
+  const faithIntensity = round(clamp(context.metrics.divineActivity.value * 0.45 + biasValue(context.timelineImpact, "divineRelicDensity") * 0.25 + magicAdaptation * 0.18
+    + rng.withScope(`${subject}.faithIntensity`, (scoped) => scoped.range(-10, 10))));
+  const expansionDrive = round(clamp(civilizationChance * 0.34 + context.metrics.civilizationPotential.value * 0.3 + planet.habitability * 0.2 - planet.magicSaturation * 0.06
+    + rng.withScope(`${subject}.expansionDrive`, (scoped) => scoped.range(-8, 8))));
+  const stability = round(clamp(planet.stability * 0.54 + context.metrics.causalityIntegrity.value * 0.24 + context.metrics.stability.value * 0.18 - biasValue(context.timelineImpact, "causalHazardLevel") * 0.18
+    + rng.withScope(`${subject}.stability`, (scoped) => scoped.range(-8, 8))));
 
   return {
     originPlanetId: planet.id,

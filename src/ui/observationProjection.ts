@@ -16,7 +16,13 @@ export type ObservationNode = {
   size: number;
   brightness: number;
   intensity: Record<ObservationOverlay, number>;
+  intensitySourceSubjects: Record<ObservationOverlay, readonly string[]>;
   relatedEventIds: string[];
+};
+
+type ObservationMeasure = {
+  value: number;
+  sourceSubjectIds: string[];
 };
 
 export type ObservationProjection = {
@@ -101,34 +107,43 @@ function systemProjection(universe: UniverseSummary, galaxy: Galaxy, system: Sta
 function galaxyNode(universe: UniverseSummary, galaxy: Galaxy): ObservationNode {
   const civilizations = universe.civilizations.filter((item) => item.originGalaxyId === galaxy.id);
   const planets = galaxy.starSystems.flatMap((system) => system.planets);
+  const planetSubjects = planets.flatMap(planetSubjectsForLife);
+  const civilizationSubjects = civilizations.map((civilization) => civilization.id);
+  const divinitySubjects = civilizations.flatMap((civilization) => [civilization.id, `${civilization.id}.mythology`]);
   return createNode(galaxy.id, undefined, "galaxy", galaxy.name, `${galaxyTypeName(galaxy.type)} · ${galaxy.starSystems.length} 个恒星系`, galaxy.mass, galaxy.metallicity, {
-    life: clamp(average(planets.map((planet) => lifeValue(planet))) * 0.75 + universe.metrics.lifePotential.value * 0.25),
-    civilization: civilizationValue(civilizations),
-    magic: clamp(galaxy.magicFlux * 0.65 + average(civilizations.map((item) => item.magicLevel)) * 0.35),
-    divinity: clamp(galaxy.divineResidue * 0.55 + average(civilizations.map(divinityValue)) * 0.45),
-    causality: causalityValue(universe, galaxy.causalHazard),
+    life: measure(clamp(average(planets.map((planet) => lifeValue(planet))) * 0.75 + universe.metrics.lifePotential.value * 0.25), ["metric.lifePotential", ...planetSubjects]),
+    civilization: measure(civilizationValue(civilizations), civilizationSubjects),
+    magic: measure(clamp(galaxy.magicFlux * 0.65 + average(civilizations.map((item) => item.magicLevel)) * 0.35), [galaxy.id, ...civilizationSubjects]),
+    divinity: measure(clamp(galaxy.divineResidue * 0.55 + average(civilizations.map(divinityValue)) * 0.45), [galaxy.id, ...divinitySubjects]),
+    causality: measure(causalityValue(universe, galaxy.causalHazard), [galaxy.id, "metric.causalityIntegrity"]),
   }, universe, galaxy.sourceEventIds);
 }
 
 function systemNode(universe: UniverseSummary, galaxy: Galaxy, system: StarSystem): ObservationNode {
   const civilizations = universe.civilizations.filter((item) => item.originStarSystemId === system.id);
+  const planetSubjects = system.planets.flatMap(planetSubjectsForLife);
+  const planetIds = system.planets.map((planet) => planet.id);
+  const civilizationSubjects = civilizations.map((civilization) => civilization.id);
+  const divinitySubjects = civilizations.flatMap((civilization) => [civilization.id, `${civilization.id}.mythology`]);
   return createNode(system.id, galaxy.id, "system", system.name, `${starSystemTypeName(system.type)} · ${system.starClass} · ${system.planets.length} 颗行星`, system.luminosity, system.stability, {
-    life: clamp(average(system.planets.map((planet) => lifeValue(planet))) * 0.75 + universe.metrics.lifePotential.value * 0.25),
-    civilization: civilizationValue(civilizations),
-    magic: clamp(galaxy.magicFlux * 0.25 + average(system.planets.map((planet) => planet.magicSaturation)) * 0.45 + average(civilizations.map((item) => item.magicLevel)) * 0.3),
-    divinity: clamp(galaxy.divineResidue * 0.4 + average(civilizations.map(divinityValue)) * 0.6),
-    causality: causalityValue(universe, galaxy.causalHazard * 0.45 + system.anomalyLevel * 0.55),
+    life: measure(clamp(average(system.planets.map((planet) => lifeValue(planet))) * 0.75 + universe.metrics.lifePotential.value * 0.25), ["metric.lifePotential", ...planetSubjects]),
+    civilization: measure(civilizationValue(civilizations), civilizationSubjects),
+    magic: measure(clamp(galaxy.magicFlux * 0.25 + average(system.planets.map((planet) => planet.magicSaturation)) * 0.45 + average(civilizations.map((item) => item.magicLevel)) * 0.3), [galaxy.id, ...planetIds, ...civilizationSubjects]),
+    divinity: measure(clamp(galaxy.divineResidue * 0.4 + average(civilizations.map(divinityValue)) * 0.6), [galaxy.id, ...divinitySubjects]),
+    causality: measure(causalityValue(universe, galaxy.causalHazard * 0.45 + system.anomalyLevel * 0.55), [galaxy.id, system.id, "metric.causalityIntegrity"]),
   }, universe, system.sourceEventIds);
 }
 
 function planetNode(universe: UniverseSummary, galaxy: Galaxy, system: StarSystem, planet: Planet): ObservationNode {
   const civilizations = universe.civilizations.filter((item) => item.originPlanetId === planet.id);
+  const civilizationSubjects = civilizations.map((civilization) => civilization.id);
+  const divinitySubjects = civilizations.flatMap((civilization) => [civilization.id, `${civilization.id}.mythology`]);
   return createNode(planet.id, system.id, "planet", planet.name, `${planetTypeName(planet.type)} · ${orbitZoneName(planet.orbitZone)}轨道`, clamp(planet.habitability * 0.7 + planetTypeSize(planet) * 0.3), planet.stability, {
-    life: clamp(lifeValue(planet) * 0.75 + universe.metrics.lifePotential.value * 0.25),
-    civilization: civilizationValue(civilizations),
-    magic: clamp(planet.magicSaturation * 0.65 + average(civilizations.map((item) => item.magicLevel)) * 0.35),
-    divinity: clamp(galaxy.divineResidue * 0.25 + average(civilizations.map(divinityValue)) * 0.75),
-    causality: causalityValue(universe, galaxy.causalHazard * 0.35 + system.anomalyLevel * 0.4 + (100 - planet.stability) * 0.25),
+    life: measure(clamp(lifeValue(planet) * 0.75 + universe.metrics.lifePotential.value * 0.25), ["metric.lifePotential", ...planetSubjectsForLife(planet)]),
+    civilization: measure(civilizationValue(civilizations), civilizationSubjects),
+    magic: measure(clamp(planet.magicSaturation * 0.65 + average(civilizations.map((item) => item.magicLevel)) * 0.35), [planet.id, ...civilizationSubjects]),
+    divinity: measure(clamp(galaxy.divineResidue * 0.25 + average(civilizations.map(divinityValue)) * 0.75), [galaxy.id, ...divinitySubjects]),
+    causality: measure(causalityValue(universe, galaxy.causalHazard * 0.35 + system.anomalyLevel * 0.4 + (100 - planet.stability) * 0.25), [galaxy.id, system.id, planet.id, "metric.causalityIntegrity"]),
   }, universe, planet.sourceEventIds);
 }
 
@@ -140,7 +155,7 @@ function createNode(
   detail: string,
   sizeSource: number,
   brightnessSource: number,
-  intensity: Record<ObservationOverlay, number>,
+  measures: Record<ObservationOverlay, ObservationMeasure>,
   universe: UniverseSummary,
   sourceIds: string[],
 ): ObservationNode {
@@ -156,7 +171,14 @@ function createNode(
     y,
     size: 3.2 + clamp(sizeSource) / 36,
     brightness: clamp(brightnessSource),
-    intensity: mapIntensity(intensity),
+    intensity: mapIntensity(Object.fromEntries(Object.entries(measures).map(([key, entry]) => [key, entry.value])) as Record<ObservationOverlay, number>),
+    intensitySourceSubjects: {
+      life: [...new Set(measures.life.sourceSubjectIds)],
+      civilization: [...new Set(measures.civilization.sourceSubjectIds)],
+      magic: [...new Set(measures.magic.sourceSubjectIds)],
+      divinity: [...new Set(measures.divinity.sourceSubjectIds)],
+      causality: [...new Set(measures.causality.sourceSubjectIds)],
+    },
     relatedEventIds: universe.timeline.filter((event) => sourceIds.includes(event.id)
       || event.sourceIds.includes(id)
       || event.location.includes(label)).map((event) => event.id),
@@ -173,6 +195,14 @@ function civilizationValue(civilizations: Civilization[]): number {
 
 function divinityValue(civilization: Civilization): number {
   return (civilization.faithIntensity + civilization.mythology.influenceLevel) / 2;
+}
+
+function planetSubjectsForLife(planet: Planet): string[] {
+  return planet.biosphere ? [planet.id, `${planet.id}.biosphere`] : [planet.id];
+}
+
+function measure(value: number, sourceSubjectIds: string[]): ObservationMeasure {
+  return { value, sourceSubjectIds };
 }
 
 function causalityValue(universe: UniverseSummary, localRisk: number): number {

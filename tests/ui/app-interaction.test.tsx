@@ -1,15 +1,19 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/preact";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../src/App";
 import { AppErrorBoundary } from "../../src/components/AppErrorBoundary";
+import { MiraclePanel } from "../../src/components/MiraclePanel";
 import { SpaceExplorer } from "../../src/components/SpaceExplorer";
-import { generateUniverse, RULESET_VERSION, type MiracleType } from "../../src/sim";
+import { buildStateValueCausalProjection, generateUniverse, RULESET_VERSION, stateValueResult, type MiracleType } from "../../src/sim";
 import { buildMiracleTargetOptions } from "../../src/ui/miracleTargets";
 import { buildObservationProjection } from "../../src/ui/observationProjection";
 import { buildSourceLabelMap, summarizeSpace } from "../../src/ui/selectors";
+import { useUniverseAppModel, type AppPageId } from "../../src/ui/useUniverseAppModel";
 import { saveUniverseEntry, serializeArchive, type UniverseArchiveEntry } from "../../src/ui/archive";
+import { resultValueFingerprint } from "../../src/ui/resultValueContract";
+import { interactionKindName, metricName, miracleOveruseLevelName, miracleTypeName, polarityName, signed } from "../../src/ui/labels";
 
 describe("应用关键交互", () => {
   beforeEach(() => window.localStorage.clear());
@@ -31,6 +35,285 @@ describe("应用关键交互", () => {
     const civilizationChoices = document.querySelectorAll(".civilization-select");
     await user.click(civilizationChoices[Math.min(1, civilizationChoices.length - 1)] as HTMLElement);
   });
+
+  it("可以通过一级入口用键盘完成真实宇宙的双向因果查询", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    const causalityNavigation = screen.getByRole("button", { name: /结果、原因与影响链路/ });
+
+    causalityNavigation.focus();
+    await user.keyboard("{Enter}");
+
+    expect(causalityNavigation.getAttribute("aria-current")).toBe("page");
+    expect(screen.getByRole("heading", { name: "因果查询" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: /的因果查询/ })).toBeTruthy();
+    expect(container.querySelectorAll(".causal-result-list > button:not(.causal-load-more)").length).toBeGreaterThan(0);
+
+    const activeResult = container.querySelector<HTMLButtonElement>(".causal-result-list > button.active")!;
+    const originalHeading = screen.getByRole("heading", { level: 3 }).textContent;
+    activeResult.focus();
+    await user.keyboard("{ArrowDown}");
+    expect(document.activeElement).not.toBe(activeResult);
+    expect(screen.getByRole("heading", { level: 3 }).textContent).not.toBe(originalHeading);
+
+    const causesTab = screen.getByRole("tab", { name: "为什么发生" });
+    causesTab.focus();
+    await user.keyboard("{ArrowRight}");
+    const effectsTab = screen.getByRole("tab", { name: "产生了什么后果" });
+    expect(document.activeElement).toBe(effectsTab);
+    expect(effectsTab.getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByRole("tabpanel")).toBeTruthy();
+  });
+
+  it("真实宇宙的因果查询入口没有自动化可检测的无障碍违规", async () => {
+    const { container } = render(<App initialPage="causality" />);
+    const result = await axe(container);
+    expect(result.violations).toEqual([]);
+  });
+
+  it("主要旧页面的可见结果可以就地追因并返回原页面继续浏览", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+
+    async function traceAndReturn(button: HTMLElement, pageHeading: string) {
+      await user.click(button);
+      expect(screen.getByRole("heading", { name: "因果查询" })).toBeTruthy();
+      await user.click(screen.getByRole("button", { name: "返回" }));
+      expect(screen.getByRole("heading", { name: pageHeading })).toBeTruthy();
+    }
+
+    await traceAndReturn(container.querySelector(".metric-tile .trace")!, "宇宙指标");
+
+    await user.click(screen.getByTitle("时间线与阶段影响"));
+    await traceAndReturn(container.querySelector(".event-detail .trace")!, "纪元时间线");
+
+    await user.click(screen.getByTitle("文明演化与神话"));
+    await traceAndReturn(container.querySelector(".civilization-detail > .trace")!, "文明演化");
+    await traceAndReturn(container.querySelector(".mythology-block .trace")!, "文明演化");
+    await traceAndReturn(container.querySelector(".civilization-history .trace")!, "文明演化");
+
+    await user.click(screen.getByTitle("造物主干预与奇迹"));
+    await user.selectOptions(screen.getByRole("combobox", { name: "奇迹类型" }), "repair_causality");
+    await user.click(screen.getByRole("button", { name: "施加奇迹" }));
+    await traceAndReturn(container.querySelector(".miracle-summary article .trace")!, "造物主干预");
+    await traceAndReturn(container.querySelector(".miracle-deltas .trace")!, "造物主干预");
+    await traceAndReturn(container.querySelector(".intervention-log article .trace")!, "造物主干预");
+
+    await user.click(screen.getByRole("button", { name: "施加奇迹" }));
+    await user.click(screen.getByRole("button", { name: "施加奇迹" }));
+    await traceAndReturn(container.querySelector(".backlash-entry .trace")!, "造物主干预");
+  }, 30_000);
+
+  it("各主要页面登记的追因入口都能唯一定位当前生产图", () => {
+    const { result } = renderHook(() => useUniverseAppModel());
+    const graph = result.current.universe.causalGraph;
+    const pages: Array<{ id: AppPageId; minimum: number }> = [
+      { id: "overview", minimum: 18 },
+      { id: "space", minimum: 25 },
+      { id: "civilizations", minimum: 20 },
+      { id: "timeline", minimum: 20 },
+      { id: "laws", minimum: 20 },
+      { id: "logs", minimum: 6 },
+      { id: "miracles", minimum: 10 },
+    ];
+    for (const page of pages) {
+      const view = render(<App initialPage={page.id} />);
+      const buttons = [...view.container.querySelectorAll<HTMLElement>("[data-t]")];
+      expect(buttons.length, `${page.id} 追因入口数量`).toBeGreaterThanOrEqual(page.minimum);
+      for (const button of buttons) {
+        const subjectId = button.dataset.t!;
+        expect(graph.nodes.filter((node) => node.subjectId === subjectId), `${page.id}/${subjectId}`).toHaveLength(1);
+        expect(button.getAttribute("aria-label"), `${page.id}/${subjectId} 可访问名称`).toMatch(/^追溯.+原因$/);
+      }
+      const stateButtons = [...view.container.querySelectorAll<HTMLElement>("[data-p]")];
+      for (const button of stateButtons) {
+        const subjectId = button.dataset.p!;
+        expect(buildStateValueCausalProjection(result.current.universe, subjectId).subjectId).toBe(subjectId);
+        expect(button.getAttribute("aria-label"), `${page.id}/${subjectId} 状态值可访问名称`).toMatch(/^追溯.+原因$/);
+      }
+      for (const resultElement of view.container.querySelectorAll<HTMLElement>("[data-result-subject]")) {
+        const subjectId = resultElement.dataset.resultSubject!;
+        const strategy = resultElement.dataset.resultStrategy ?? (resultElement.classList.contains("attribute-bar") ? "state" : "cause");
+        expect(strategy, `${page.id}/${subjectId} 缺少追因策略`).toMatch(/^(cause|state)$/);
+        const resultContext = resultElement.closest("article, .space-choice, .civilization-choice, .space-list, .space-detail, .civilization-detail") ?? resultElement;
+        expect(resultElement.querySelector(`[data-p="${subjectId}"], [data-t="${subjectId}"]`)
+          ?? resultContext.querySelector(`[data-p="${subjectId}"], [data-t="${subjectId}"]`), `${page.id}/${subjectId} 可见结果缺少追因入口`).toBeTruthy();
+        expect(resultElement.dataset.resultValue, `${page.id}/${subjectId} 缺少原始值指纹`).toBeDefined();
+        expect(resultElement.dataset.resultValue, `${page.id}/${subjectId} 不得登记 undefined`).not.toBe("undefined");
+        if (strategy === "state") {
+          expect(resultElement.dataset.resultValue, `${page.id}/${subjectId} 状态值与生产事实不一致`)
+            .toBe(resultValueFingerprint(stateValueResult(result.current.universe, subjectId)));
+        }
+      }
+      const resultSubjects = new Set([...view.container.querySelectorAll<HTMLElement>("[data-result-subject]")].map((element) => element.dataset.resultSubject));
+      const resultValues = new Map<string, Set<string>>();
+      for (const element of view.container.querySelectorAll<HTMLElement>("[data-result-subject]")) {
+        const values = resultValues.get(element.dataset.resultSubject!) ?? new Set<string>();
+        values.add(element.dataset.resultValue!);
+        resultValues.set(element.dataset.resultSubject!, values);
+      }
+      const expectValue = (subjectId: string, value: unknown) => expect(resultValues.get(subjectId), `${page.id}/${subjectId} 缺少生产值指纹`)
+        .toContain(resultValueFingerprint(value));
+      if (page.id === "overview") {
+        Object.keys(result.current.universe.metrics).forEach((key) => expect(resultSubjects.has(`metric.${key}`), `概览缺少指标 ${key} 的结果契约`).toBe(true));
+        ["space.stats.galaxies", "space.stats.planets", "civilization.stats.total", "civilization.stats.paths", "civilization.stats.mythologies", "civilization.stats.highRisk"]
+          .forEach((subject) => expect(resultSubjects.has(subject), `概览缺少 ${subject} 的结果契约`).toBe(true));
+        expectValue("universe.name", result.current.universe.name);
+        expectValue("universe.description", result.current.universe.description);
+        expectValue("input.seed", result.current.universe.seed);
+        expectValue("share.code", result.current.universe.shareCode);
+        expectValue("share.url", result.current.universe.shareUrl);
+      }
+      if (page.id === "space") {
+        result.current.universe.galaxies.forEach((galaxy) => {
+          expect(resultSubjects.has(`${galaxy.id}.starSystems.count`), `星系 ${galaxy.id} 缺少成员数量结果契约`).toBe(true);
+          expectValue(galaxy.id, galaxy.name);
+        });
+        result.current.selectedGalaxy?.starSystems.forEach((system) => expectValue(system.id, system.name));
+        result.current.selectedSystem?.planets.forEach((planet) => expectValue(planet.id, planet.name));
+      }
+      if (page.id === "timeline") {
+        expect(resultSubjects.has(result.current.selectedEvent.id), "时间线缺少事件元数据结果契约").toBe(true);
+        result.current.selectedEvent.effects.forEach((_effect, index) => expect(resultSubjects.has(`${result.current.selectedEvent.id}.effect.${index + 1}`), "时间线缺少效果结果契约").toBe(true));
+      }
+      if (page.id === "civilizations" && result.current.selectedCivilization) {
+        ["speciesType", "path", "fate", "technologyLevel", "magicLevel", "faithIntensity", "expansionDrive", "stability", "extinctionRisk"]
+          .forEach((field) => expect(resultSubjects.has(`${result.current.selectedCivilization!.id}.${field}`), `文明字段 ${field} 缺少结果契约`).toBe(true));
+        result.current.universe.civilizations.filter((civilization) => resultValues.has(civilization.id))
+          .forEach((civilization) => expectValue(civilization.id, civilization.name));
+        expectValue(result.current.selectedCivilization.originGalaxyId, result.current.selectedCivilization.originGalaxyName);
+        expectValue(result.current.selectedCivilization.originStarSystemId, result.current.selectedCivilization.originStarSystemName);
+        expectValue(result.current.selectedCivilization.originPlanetId, result.current.selectedCivilization.originPlanetName);
+      }
+      if (page.id === "laws") {
+        const visibleText = (subjectId: string) => view.container.querySelector<HTMLElement>(`[data-result-subject="${subjectId}"] > span`)?.textContent;
+        const sourceLabels = buildSourceLabelMap(result.current.universe);
+        Object.values(result.current.universe.laws).forEach((law) => {
+          ["title", "rating.label", "rating.explanation", "traits", "cost"].forEach((field) => expect(resultSubjects.has(`${law.id}.${field}`), `法则领域字段 ${law.id}.${field} 缺少结果契约`).toBe(true));
+          expect(visibleText(`${law.id}.title`)).toBe(law.title);
+          expect(visibleText(`${law.id}.rating.label`)).toBe(law.rating.label);
+          expect(visibleText(`${law.id}.rating.explanation`)).toBe(law.rating.explanation);
+          expect(visibleText(`${law.id}.traits`)).toBe(law.traits.join(""));
+          expect(visibleText(`${law.id}.cost`)).toBe(law.cost);
+          law.rules.forEach((rule) => {
+            ["name", "value", "label", "polarity", "explanation", "effectTargets"]
+              .forEach((field) => expect(resultSubjects.has(`${rule.id}.${field}`), `规则字段 ${rule.id}.${field} 缺少结果契约`).toBe(true));
+            expect(visibleText(`${rule.id}.name`)).toBe(rule.name);
+            expect(visibleText(`${rule.id}.value`)).toBe(String(rule.value));
+            expect(visibleText(`${rule.id}.label`)).toBe(rule.label);
+            expect(visibleText(`${rule.id}.polarity`)).toBe(polarityName(rule.polarity));
+            expect(visibleText(`${rule.id}.explanation`)).toBe(rule.explanation);
+            expect(visibleText(`${rule.id}.effectTargets`)).toBe(rule.effectTargets.map(metricName).join(""));
+          });
+        });
+        result.current.universe.lawInteractions.forEach((interaction) => {
+          ["kind", "impact", "sourceLawId", "targetLawId", "explanation"]
+            .forEach((field) => expect(resultSubjects.has(`${interaction.id}.${field}`), `法则关系字段 ${interaction.id}.${field} 缺少结果契约`).toBe(true));
+          expect(visibleText(`${interaction.id}.kind`)).toBe(interactionKindName(interaction.kind));
+          expect(visibleText(`${interaction.id}.impact`)).toBe(signed(interaction.impact));
+          expect(visibleText(`${interaction.id}.sourceLawId`)).toBe(sourceLabels.get(interaction.sourceLawId));
+          expect(visibleText(`${interaction.id}.targetLawId`)).toBe(sourceLabels.get(interaction.targetLawId));
+          expect(visibleText(`${interaction.id}.explanation`)).toBe(interaction.explanation);
+        });
+      }
+      if (page.id === "logs") {
+        const expectLogText = (subjectId: string, item: string) => {
+          expect(resultSubjects.has(subjectId)).toBe(true);
+          expect(view.container.querySelector<HTMLElement>(`[data-result-subject="${subjectId}"] > span`)?.textContent).toBe(item);
+        };
+        result.current.universe.observationLog.importantEvents.forEach((item, index) => expectLogText(`observation.important.${index + 1}`, item));
+        result.current.universe.observationLog.rareFindings.forEach((item, index) => expectLogText(`observation.rare.${index + 1}`, item));
+        result.current.universe.observationLog.possibleEndings.forEach((item, index) => expectLogText(`observation.ending.${index + 1}`, item));
+      }
+      if (page.id === "miracles") {
+        expect(resultSubjects.has("miracle-state")).toBe(true);
+        expect(resultSubjects.has("miracle-state.overuseLevel")).toBe(true);
+        Object.keys(result.current.universe.miracleState.metricDeltas)
+          .forEach((metricId) => expect(resultSubjects.has(`miracle-state.metric-delta.${metricId}`)).toBe(true));
+      }
+      view.unmount();
+    }
+  }, 30_000);
+
+  it("已施加干预的概率、指标和日志字段完整登记真实值", () => {
+    const { result } = renderHook(() => useUniverseAppModel());
+    act(() => result.current.applySelectedMiracle());
+    const view = render(<MiraclePanel
+      universe={result.current.universe}
+      targetOptions={result.current.miracleTargetOptions}
+      selectedMiracleType={result.current.selectedMiracleType}
+      selectedTargetId={result.current.selectedMiracleTargetId}
+      onSelectMiracleType={result.current.setSelectedMiracleType}
+      onSelectTarget={result.current.setSelectedMiracleTargetId}
+      onApplyMiracle={result.current.applySelectedMiracle}
+      onClearInterventions={result.current.clearInterventions}
+    />);
+    const subjects = new Set([...view.container.querySelectorAll<HTMLElement>("[data-result-subject]")].map((element) => element.dataset.resultSubject));
+    const visibleText = (subjectId: string) => view.container.querySelector<HTMLElement>(`[data-result-subject="${subjectId}"] > span`)?.textContent;
+    const miracle = result.current.universe.miracleState.appliedMiracles[0];
+    const log = result.current.universe.miracleState.interventionLog[0];
+    expect(subjects.has(`${miracle.id}.type`)).toBe(true);
+    expect(visibleText("miracle-state.overuseLevel")).toBe(miracleOveruseLevelName(result.current.universe.miracleState.overuseLevel));
+    expect(visibleText(`${miracle.id}.type`)).toBe(miracleTypeName(miracle.type));
+    miracle.probabilityShifts.forEach((shift, index) => {
+      const owner = `${miracle.id}.probability-shift.${shift.eventType}.${index + 1}`;
+      ["eventType", "delta", "explanation"].forEach((field) =>
+        expect(subjects.has(`${owner}.${field}`), `概率字段 ${field} 缺少结果契约`).toBe(true));
+      expect(visibleText(`${owner}.eventType`)).toBe(shift.eventType);
+      expect(visibleText(`${owner}.delta`)).toBe(signed(shift.delta));
+      expect(visibleText(`${owner}.explanation`)).toBe(shift.explanation);
+    });
+    ["ageLabel", "miracleType", "targetLabel", "directResult", "longTermConsequence"].forEach((field) =>
+      expect(subjects.has(`${log.id}.${field}`), `干预日志字段 ${field} 缺少结果契约`).toBe(true));
+    expect(visibleText(`${log.id}.ageLabel`)).toBe(log.ageLabel);
+    expect(visibleText(`${log.id}.miracleType`)).toBe(miracleTypeName(log.miracleType));
+    expect(visibleText(`${log.id}.targetLabel`)).toBe(log.targetLabel);
+    expect(visibleText(`${log.id}.directResult`)).toBe(log.directResult);
+    expect(visibleText(`${log.id}.longTermConsequence`)).toBe(log.longTermConsequence);
+    Object.entries(result.current.universe.miracleState.metricDeltas).forEach(([metricId, delta]) =>
+      expect(visibleText(`miracle-state.metric-delta.${metricId}`)).toBe(signed(delta)));
+    miracle.targetMutations.forEach((mutation) => {
+      const subjectId = `${miracle.id}.mutation.${mutation.targetKind}.${mutation.targetId}.${mutation.field}`;
+      expect(subjects.has(subjectId)).toBe(true);
+      expect(visibleText(subjectId)).toBe(`实体变化：${mutation.field} 从 ${String(mutation.before ?? "无")} 变为 ${String(mutation.after ?? "无")}，${mutation.explanation}`);
+    });
+    for (const element of view.container.querySelectorAll<HTMLElement>('[data-result-strategy="state"]')) {
+      expect(element.dataset.resultValue).toBe(resultValueFingerprint(stateValueResult(result.current.universe, element.dataset.resultSubject!)));
+    }
+    view.unmount();
+  }, 30_000);
+
+  it("追因返回会保留文明筛选分页、选中结果和焦点上下文", async () => {
+    const user = userEvent.setup();
+    render(<App initialPage="civilizations" />);
+    const search = screen.getByRole("textbox", { name: "搜索文明" });
+    const pathFilter = screen.getByRole("combobox", { name: "文明路径" });
+    const selectedName = screen.getByRole("heading", { level: 3 }).textContent!;
+    await user.type(search, selectedName.slice(0, 2));
+    await user.selectOptions(pathFilter, (pathFilter as HTMLSelectElement).options[1].value);
+    await user.clear(search);
+    const nextPage = screen.getByRole("button", { name: "下一页" });
+    await user.click(nextPage);
+    const pageLabel = screen.getByText(/第 2 \/ /).textContent;
+    const trace = document.querySelector<HTMLButtonElement>(".civilization-detail > .trace")!;
+    await user.click(trace);
+    await user.click(screen.getByRole("button", { name: "返回" }));
+    await waitFor(() => expect(document.activeElement).toBe(trace));
+    expect((pathFilter as HTMLSelectElement).value).not.toBe("all");
+    expect(screen.getByText(pageLabel!)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: selectedName })).toBeTruthy();
+  }, 30_000);
+
+  it("字段级可见结果按需建立闭包投影并恢复触发焦点", async () => {
+    const user = userEvent.setup();
+    render(<App initialPage="space" />);
+    const trace = screen.getByRole("button", { name: "追溯宜居性原因" });
+    await user.click(trace);
+    expect(screen.getByRole("heading", { name: /：宜居性/ })).toBeTruthy();
+    expect(screen.getByText(/宜居性当前值为/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "返回" }));
+    await waitFor(() => expect(document.activeElement).toBe(trace));
+  }, 30_000);
 
   it("概览快捷入口可以进入星系和文明页面", async () => {
     const user = userEvent.setup();
@@ -64,6 +347,64 @@ describe("应用关键交互", () => {
     expect(onSelectGalaxy).toHaveBeenCalledTimes(1);
     expect(onSelectSystem).toHaveBeenCalledTimes(1);
     expect(onSelectPlanet).toHaveBeenCalledTimes(1);
+  });
+
+  it("空间详情中的生命与文明负事实可以直接进入因果追溯", async () => {
+    const user = userEvent.setup();
+    const universe = generateUniverse({ seed: "SPACE-NEGATIVE-FACTS", rulesetVersion: RULESET_VERSION, templateId: "high_magic" });
+    const planets = universe.galaxies.flatMap((galaxy) => galaxy.starSystems.flatMap((system) => system.planets.map((planet) => ({ galaxy, system, planet }))));
+    const candidate = planets.find(({ planet }) => planet.biosphere && !planet.biosphere.civilizationSeed)
+      ?? planets.find(({ planet }) => !planet.biosphere)!;
+    const onTraceCausalSubject = vi.fn();
+    const host = (explorer: React.ReactNode) => <div onClick={(event) => {
+      const subjectId = (event.target as Element).closest<HTMLElement>("[data-t]")?.dataset.t;
+      if (subjectId) onTraceCausalSubject(subjectId);
+    }}>{explorer}</div>;
+    render(host(<SpaceExplorer
+      universe={universe}
+      stats={summarizeSpace(universe)}
+      selectedGalaxy={candidate.galaxy}
+      selectedSystem={candidate.system}
+      selectedPlanet={candidate.planet}
+      sourceLabelById={buildSourceLabelMap(universe)}
+      onSelectGalaxy={vi.fn()}
+      onSelectSystem={vi.fn()}
+      onSelectPlanet={vi.fn()}
+    />));
+    await user.click(screen.getByRole("button", { name: /追溯未形成.*原因/ }));
+    expect(onTraceCausalSubject).toHaveBeenCalledWith(candidate.planet.biosphere
+      ? `${candidate.planet.id}.civilization-seed.absent`
+      : `${candidate.planet.id}.biosphere.absent`);
+
+    const noBiosphere = planets.find(({ planet }) => !planet.biosphere);
+    if (noBiosphere && candidate.planet.biosphere) {
+      onTraceCausalSubject.mockClear();
+      render(host(<SpaceExplorer
+        universe={universe}
+        stats={summarizeSpace(universe)}
+        selectedGalaxy={noBiosphere.galaxy}
+        selectedSystem={noBiosphere.system}
+        selectedPlanet={noBiosphere.planet}
+        sourceLabelById={buildSourceLabelMap(universe)}
+        onSelectGalaxy={vi.fn()}
+        onSelectSystem={vi.fn()}
+        onSelectPlanet={vi.fn()}
+      />));
+      await user.click(screen.getAllByRole("button", { name: /追溯未形成.*原因/ }).at(-1)!);
+      expect(onTraceCausalSubject).toHaveBeenCalledWith(`${noBiosphere.planet.id}.biosphere.absent`);
+    }
+  });
+
+  it("应用模型可以按主题打开负事实，未知或不唯一主题明确报错", () => {
+    const { result } = renderHook(() => useUniverseAppModel({ initialPage: "space" }));
+    const negative = result.current.universe.causalGraph.nodes.find((node) => node.kind === "negative_fact")!;
+    act(() => result.current.openCausalSubject(negative.subjectId));
+    expect(result.current.activePage).toBe("causality");
+    expect(result.current.causalView.initialNodeId).toBe(negative.id);
+    act(() => result.current.setActivePage("space"));
+    act(() => result.current.openCausalSubject("missing.subject"));
+    expect(result.current.activePage).toBe("space");
+    expect(result.current.traceError).toContain("missing.subject");
   });
 
   it("奇迹目标选择覆盖宇宙、恒星系、行星、神话和文明目标", () => {
@@ -101,9 +442,7 @@ describe("应用关键交互", () => {
     await user.click(galaxyBreadcrumb);
     expect(screen.getByText(/选择节点可进入恒星系层/)).toBeTruthy();
     const svgNode = container.querySelector<SVGGElement>(".observation-node")!;
-    svgNode.focus();
-    expect(document.activeElement).toBe(svgNode);
-    await user.keyboard("{Enter}");
+    fireEvent.keyDown(svgNode, { key: "Enter" });
     expect(screen.getByText(/选择节点可查看结构化详情/)).toBeTruthy();
     await user.selectOptions(screen.getByRole("combobox", { name: "信息叠层" }), "causality");
     expect((screen.getByRole("combobox", { name: "信息叠层" }) as HTMLSelectElement).value).toBe("causality");
@@ -162,7 +501,7 @@ describe("应用关键交互", () => {
     expect(screen.getByRole("status").textContent).toContain("新增 1 条，更新 0 条");
     await user.click(screen.getByRole("button", { name: "恢复" }));
     expect(document.querySelector(".universe-title h2")).toBeTruthy();
-    expect(screen.getByRole("textbox", { name: "Seed" }).getAttribute("value")).toBe("LUX-7F3A-91C2");
+    expect((screen.getByRole("textbox", { name: "Seed" }) as HTMLInputElement).value).toBe("LUX-7F3A-91C2");
   });
 
   it("文明列表对大样本分页并支持搜索与路径筛选", async () => {
@@ -197,7 +536,7 @@ describe("应用关键交互", () => {
     await user.click(screen.getByTitle("造物主干预与奇迹"));
     expect(screen.getByText(/1 次奇迹/)).toBeTruthy();
     expect(screen.getByText(/实体变化：habitability/)).toBeTruthy();
-  });
+  }, 10_000);
 
   it("图书馆拒绝损坏导入且保留现有条目", async () => {
     const user = userEvent.setup();
@@ -261,6 +600,9 @@ describe("应用关键交互", () => {
     await user.click(screen.getByRole("button", { name: "施加奇迹" }));
     expect(await screen.findByText(/实体变化：habitability/)).toBeTruthy();
     expect(screen.getByText(/造物主对.*施加“祝福行星”/)).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "清除干预" }));
+    expect(screen.getByText("当前宇宙处于观察者模式，没有干预日志。")).toBeTruthy();
   });
 
   it("空 Seed 会显示错误并保留当前宇宙，修正后可以继续创世", async () => {

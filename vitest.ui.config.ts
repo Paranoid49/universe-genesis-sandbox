@@ -1,12 +1,15 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+import { uiRuntimeAliases } from "./ui-runtime.config";
 
 export default defineConfig({
   plugins: [react()],
+  resolve: { alias: uiRuntimeAliases },
   test: {
     environment: "jsdom",
     globals: true,
     include: ["tests/ui/**/*.test.tsx"],
+    setupFiles: ["tests/ui/setup.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary"],

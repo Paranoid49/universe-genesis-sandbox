@@ -4,8 +4,10 @@ import { App } from "./App";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import "./styles.css";
 import "./styles-simulation.css";
+import "./styles-causality.css";
 import "./styles-features.css";
 import "./styles-responsive.css";
+import "./styles-causality-responsive.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

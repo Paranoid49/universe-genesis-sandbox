@@ -10,6 +10,18 @@ export type CivilizationRecipeValues = {
   extinctionRisk: number;
 };
 
+export function civilizationPathQualification(path: CivilizationPath): string {
+  if (path === "tribal") return "technologyLevel<=55";
+  if (path === "city_state") return "technologyLevel<=70&&stability>=25";
+  if (path === "planetary") return "technologyLevel>=35&&stability>=35";
+  if (path === "galactic") return "technologyLevel>=45&&expansionDrive>=45";
+  if (path === "arcane_empire") return "magicLevel>=45||magicLaw>=65";
+  if (path === "theocracy") return "faithIntensity>=45||divinityLaw>=65";
+  if (path === "collective_mind") return "stability>=45||consciousnessLaw>=65";
+  if (path === "ascended") return "technologyLevel+magicLevel+faithIntensity>=150";
+  return "extinctionRisk>=45";
+}
+
 export function civilizationPathWeight(
   profile: CivilizationPathProfile,
   values: CivilizationRecipeValues,

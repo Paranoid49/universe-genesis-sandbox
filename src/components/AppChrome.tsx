@@ -1,9 +1,10 @@
-import { BarChart3, BookMarked, BookOpen, Clipboard, Dices, History, Radar, ScrollText, Sparkles, Telescope, UsersRound } from "./icons";
+import { BarChart3, BookMarked, BookOpen, Clipboard, Dices, History, Link, Radar, ScrollText, Sparkles, Telescope, UsersRound } from "./icons";
 import { RULESET_VERSION, UNIVERSE_TEMPLATES, type UniverseTemplateId } from "../sim";
 import type { AppPageId } from "../ui/useUniverseAppModel";
 
 const appPageOptions: Array<{ id: AppPageId; label: string; description: string; icon: typeof BarChart3 }> = [
   { id: "overview", label: "概览", description: "宇宙摘要与指标", icon: BarChart3 },
+  { id: "causality", label: "因果", description: "结果、原因与影响链路", icon: Link },
   { id: "observe", label: "观察台", description: "二维宇宙投影与时间浏览", icon: Radar },
   { id: "space", label: "星系", description: "星系、恒星系与行星", icon: Telescope },
   { id: "civilizations", label: "文明", description: "文明演化与神话", icon: UsersRound },
@@ -76,7 +77,7 @@ export function PageNavigation({ activePage, onChange }: { activePage: AppPageId
       {appPageOptions.map((page) => {
         const Icon = page.icon;
         return (
-          <button className={activePage === page.id ? "active" : ""} key={page.id} type="button" onClick={() => onChange(page.id)} title={page.description}>
+          <button aria-current={activePage === page.id ? "page" : undefined} aria-label={`${page.label}：${page.description}`} className={activePage === page.id ? "active" : ""} key={page.id} type="button" onClick={() => onChange(page.id)} title={page.description}>
             <Icon size={17} />
             <span>{page.label}</span>
             <small>{page.description}</small>

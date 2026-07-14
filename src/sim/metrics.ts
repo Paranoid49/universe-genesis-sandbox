@@ -10,7 +10,7 @@ export function generateMetrics(template: UniverseTemplate, laws: UniverseLaws, 
     (100 - Math.abs(laws.magic.rating.value - laws.physics.rating.value)) * 0.12 +
     template.stabilityBias +
     influenceTotal(influences.stability) +
-    rng.range(-6, 6);
+    rng.withScope("metric:stability", (scoped) => scoped.range(-6, 6));
 
   const lifeRaw =
     laws.life.rating.value * 0.42 +
@@ -19,7 +19,7 @@ export function generateMetrics(template: UniverseTemplate, laws: UniverseLaws, 
     laws.consciousness.rating.value * 0.12 +
     laws.magic.rating.value * 0.1 +
     influenceTotal(influences.lifePotential) +
-    rng.range(-7, 7);
+    rng.withScope("metric:lifePotential", (scoped) => scoped.range(-7, 7));
 
   const civilizationRaw =
     lifeRaw * 0.42 +
@@ -28,9 +28,9 @@ export function generateMetrics(template: UniverseTemplate, laws: UniverseLaws, 
     laws.causality.rating.value * 0.12 +
     (100 - Math.max(0, laws.divinity.rating.value - 70)) * 0.08 +
     influenceTotal(influences.civilizationPotential) +
-    rng.range(-6, 6);
+    rng.withScope("metric:civilizationPotential", (scoped) => scoped.range(-6, 6));
 
-  const ageValue = round(clamp(rng.range(18, 92) + influenceTotal(influences.age) * 0.2));
+  const ageValue = round(clamp(rng.withScope("metric:age", (scoped) => scoped.range(18, 92)) + influenceTotal(influences.age) * 0.2));
   const magicValue = round(clamp(laws.magic.rating.value + influenceTotal(influences.magicIntensity)));
   const divinityValue = round(clamp(laws.divinity.rating.value + influenceTotal(influences.divineActivity)));
   const causalityValue = round(clamp(laws.causality.rating.value + influenceTotal(influences.causalityIntegrity)));

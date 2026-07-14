@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import type { Civilization, UniverseSummary } from "../sim";
 import { civilizationEventTypeName, civilizationFateName, civilizationPathName, mythologyTypeName, signed, speciesTypeName } from "../ui/labels";
 import type { CivilizationStats } from "../ui/selectors";
-import { AttributeBar, SectionHeader, SourceList, StatTile } from "./common";
+import { AttributeBar, RegisteredResult, ResultValue, SectionHeader, SourceList, StatTile, TraceCauseButton } from "./common";
 
 const PAGE_SIZE = 30;
 
@@ -44,13 +44,13 @@ export function CivilizationPanel({
       <SectionHeader
         icon={<UsersRound size={18} />}
         title="文明演化"
-        text={`${universe.name} 的 ${stats.civilizationCount} 个文明样本，覆盖 ${stats.pathCount} 类路径与 ${stats.mythologyCount} 类神话系统`}
+        text={`${universe.name} 的文明与神话条件视图`}
       />
       <div className="civilization-stats" aria-label="文明统计">
-        <StatTile label="文明" value={stats.civilizationCount} />
-        <StatTile label="路径" value={stats.pathCount} />
-        <StatTile label="神话系统" value={stats.mythologyCount} />
-        <StatTile label="高风险" value={stats.highRiskCount} />
+        <StatTile label="文明" value={stats.civilizationCount} subjectId="civilization.stats.total" />
+        <StatTile label="路径" value={stats.pathCount} subjectId="civilization.stats.paths" />
+        <StatTile label="神话系统" value={stats.mythologyCount} subjectId="civilization.stats.mythologies" />
+        <StatTile label="高风险" value={stats.highRiskCount} subjectId="civilization.stats.highRisk" />
       </div>
 
       {selectedCivilization ? (
@@ -72,23 +72,24 @@ export function CivilizationPanel({
               <small role="status">找到 {filteredCivilizations.length} 个文明，每页最多显示 {PAGE_SIZE} 个</small>
             </div>
             <div className="civilization-results">
-              {visibleCivilizations.map((civilization) => (
+              {visibleCivilizations.map((civilization) => <div className="civilization-choice" key={civilization.id}>
                 <button
                   className={civilization.id === selectedCivilization.id ? "civilization-select active" : "civilization-select"}
-                  key={civilization.id}
                   type="button"
                   onClick={() => onSelectCivilization(civilization)}
                   title={`查看${civilization.name}`}
                 >
                   <span>
                     <Sparkles size={15} />
-                    {civilization.name}
+                    <RegisteredResult subjectId={civilization.id} value={civilization.name}>{civilization.name}</RegisteredResult>
                   </span>
-                  <small>
-                    {civilizationPathName(civilization.path)}｜{civilizationFateName(civilization.fate)}
-                  </small>
                 </button>
-              ))}
+                <small>
+                  <ResultValue subjectId={`${civilization.id}.path`} label={`${civilization.name}文明路径`} strategy="state" value={civilization.path}>{civilizationPathName(civilization.path)}</ResultValue>
+                  <ResultValue subjectId={`${civilization.id}.fate`} label={`${civilization.name}文明命运`} strategy="state" value={civilization.fate}>{civilizationFateName(civilization.fate)}</ResultValue>
+                </small>
+                <TraceCauseButton subjectId={civilization.id} label={civilization.name} />
+              </div>)}
               {visibleCivilizations.length === 0 && <p className="civilization-empty">没有符合当前筛选条件的文明。</p>}
             </div>
             {pageCount > 1 && <div className="civilization-pagination" aria-label="文明分页">
@@ -100,28 +101,42 @@ export function CivilizationPanel({
 
           <article className="civilization-detail" aria-label="文明详情">
             <span>
-              文明详情｜{selectedCivilization.originGalaxyName} / {selectedCivilization.originStarSystemName} / {selectedCivilization.originPlanetName}
+              文明详情｜<RegisteredResult subjectId={selectedCivilization.originGalaxyId} value={selectedCivilization.originGalaxyName}>{selectedCivilization.originGalaxyName}</RegisteredResult> / <RegisteredResult subjectId={selectedCivilization.originStarSystemId} value={selectedCivilization.originStarSystemName}>{selectedCivilization.originStarSystemName}</RegisteredResult> / <RegisteredResult subjectId={selectedCivilization.originPlanetId} value={selectedCivilization.originPlanetName}>{selectedCivilization.originPlanetName}</RegisteredResult>
             </span>
-            <h3>{selectedCivilization.name}</h3>
-            <p>
-              {speciesTypeName(selectedCivilization.speciesType)}走向{civilizationPathName(selectedCivilization.path)}，当前终局倾向为{civilizationFateName(selectedCivilization.fate)}。
+            <h3><RegisteredResult subjectId={selectedCivilization.id} value={selectedCivilization.name}>{selectedCivilization.name}</RegisteredResult></h3>
+            <TraceCauseButton subjectId={selectedCivilization.id} label={selectedCivilization.name} />
+            <div className="result-traces">
+              <TraceCauseButton subjectId={selectedCivilization.originGalaxyId} label={selectedCivilization.originGalaxyName} />
+              <TraceCauseButton subjectId={selectedCivilization.originStarSystemId} label={selectedCivilization.originStarSystemName} />
+              <TraceCauseButton subjectId={selectedCivilization.originPlanetId} label={selectedCivilization.originPlanetName} />
+            </div>
+            <p className="result-sentence">
+              <ResultValue subjectId={`${selectedCivilization.id}.speciesType`} label="文明物种" strategy="state" value={selectedCivilization.speciesType}>{speciesTypeName(selectedCivilization.speciesType)}</ResultValue>
+              走向<ResultValue subjectId={`${selectedCivilization.id}.path`} label="文明路径" strategy="state" value={selectedCivilization.path}>{civilizationPathName(selectedCivilization.path)}</ResultValue>
+              ，当前终局倾向为<ResultValue subjectId={`${selectedCivilization.id}.fate`} label="文明命运" strategy="state" value={selectedCivilization.fate}>{civilizationFateName(selectedCivilization.fate)}</ResultValue>。
             </p>
             <div className="detail-metrics">
-              <AttributeBar label="科技" value={selectedCivilization.technologyLevel} />
-              <AttributeBar label="魔法" value={selectedCivilization.magicLevel} />
-              <AttributeBar label="信仰" value={selectedCivilization.faithIntensity} />
-              <AttributeBar label="扩张" value={selectedCivilization.expansionDrive} />
-              <AttributeBar label="稳定" value={selectedCivilization.stability} />
-              <AttributeBar label="灭绝风险" value={selectedCivilization.extinctionRisk} />
+              <AttributeBar label="科技" value={selectedCivilization.technologyLevel} subjectId={`${selectedCivilization.id}.technologyLevel`} />
+              <AttributeBar label="魔法" value={selectedCivilization.magicLevel} subjectId={`${selectedCivilization.id}.magicLevel`} />
+              <AttributeBar label="信仰" value={selectedCivilization.faithIntensity} subjectId={`${selectedCivilization.id}.faithIntensity`} />
+              <AttributeBar label="扩张" value={selectedCivilization.expansionDrive} subjectId={`${selectedCivilization.id}.expansionDrive`} />
+              <AttributeBar label="稳定" value={selectedCivilization.stability} subjectId={`${selectedCivilization.id}.stability`} />
+              <AttributeBar label="灭绝风险" value={selectedCivilization.extinctionRisk} subjectId={`${selectedCivilization.id}.extinctionRisk`} />
             </div>
             <div className="mythology-block" aria-label="神话系统">
               <b>神话系统</b>
               <span>
-                {mythologyTypeName(selectedCivilization.mythology.type)}｜{selectedCivilization.mythology.deityName}｜影响 {selectedCivilization.mythology.influenceLevel}
+                <ResultValue subjectId={`${selectedCivilization.id}.mythology.type`} label="神话类型" strategy="state" value={selectedCivilization.mythology.type}>{mythologyTypeName(selectedCivilization.mythology.type)}</ResultValue>
+                <ResultValue subjectId={`${selectedCivilization.id}.mythology.deityName`} label="神名" strategy="state" value={selectedCivilization.mythology.deityName}>{selectedCivilization.mythology.deityName}</ResultValue>
+                <ResultValue subjectId={`${selectedCivilization.id}.mythology.influenceLevel`} label="神话影响" strategy="state" value={selectedCivilization.mythology.influenceLevel}>影响 {selectedCivilization.mythology.influenceLevel}</ResultValue>
               </span>
-              <p>{selectedCivilization.mythology.origin}</p>
-              <p>{selectedCivilization.mythology.relationToCivilization}</p>
-              <small>{selectedCivilization.mythology.explanation}</small>
+              <p><ResultValue subjectId={`${selectedCivilization.id}.mythology.origin`} label="神话起源" strategy="state" value={selectedCivilization.mythology.origin}>{selectedCivilization.mythology.origin}</ResultValue></p>
+              <p><ResultValue subjectId={`${selectedCivilization.id}.mythology.relationToCivilization`} label="神话文明关系" strategy="state" value={selectedCivilization.mythology.relationToCivilization}>{selectedCivilization.mythology.relationToCivilization}</ResultValue></p>
+              <small><ResultValue subjectId={`${selectedCivilization.id}.mythology`} label="神话解释" strategy="cause" value={selectedCivilization.mythology.explanation}>{selectedCivilization.mythology.explanation}</ResultValue></small>
+              <TraceCauseButton
+                subjectId={`${selectedCivilization.id}.mythology`}
+                label={`${selectedCivilization.name}神话`}
+              />
             </div>
             <div className="source-grid">
               <SourceList title="事件来源" ids={selectedCivilization.sourceEventIds} sourceLabelById={sourceLabelById} />
@@ -137,11 +152,12 @@ export function CivilizationPanel({
             <div>
               {selectedCivilization.historyEvents.map((event) => (
                 <article key={event.id}>
-                  <span>
+                  <span><ResultValue subjectId={event.id} label={`${event.title}元数据`} strategy="cause" value={{ ageLabel: event.ageLabel, type: event.type, impact: event.impact }}>
                     {event.ageLabel}｜{civilizationEventTypeName(event.type)}｜影响 {signed(event.impact)}
-                  </span>
-                  <b>{event.title}</b>
-                  <p>{event.description}</p>
+                  </ResultValue></span>
+                  <b><ResultValue subjectId={event.id} label={`${event.title}标题`} strategy="cause" value={event.title}>{event.title}</ResultValue></b>
+                  <p><ResultValue subjectId={event.id} label={`${event.title}描述`} strategy="cause" value={event.description}>{event.description}</ResultValue></p>
+                  <TraceCauseButton subjectId={event.id} label={event.title} />
                 </article>
               ))}
             </div>

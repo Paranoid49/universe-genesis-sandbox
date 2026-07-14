@@ -84,7 +84,14 @@ export function applyInterventions(context: InterventionContext, interventions: 
       targetMutations: domainResult.mutations,
       longTermRisks: definition.longTermRisks,
     };
-    const event = createMiracleEvent(context.timeline, miracle, target, eventId, index, rng);
+    const event = rng.withScope(`intervention:${miracleId}`, (scoped) => createMiracleEvent(
+      context.timeline,
+      miracle,
+      target,
+      eventId,
+      index,
+      scoped,
+    ));
 
     spentMiraclePoints += definition.cost.miraclePoints;
     causalityStrain += definition.cost.causalityStrain;

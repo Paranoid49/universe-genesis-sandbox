@@ -17,6 +17,13 @@ export function useShareController(universe: UniverseSummary) {
       scheduleCopyStateReset();
       return;
     }
+    try {
+      void universe.causalGraph;
+    } catch {
+      setCopyState("因果校验失败");
+      scheduleCopyStateReset();
+      return;
+    }
     const shareLink = `${window.location.origin}${window.location.pathname}${universe.shareUrl}`;
     const text = `${universe.shareText}\n${shareLink}`;
     try {

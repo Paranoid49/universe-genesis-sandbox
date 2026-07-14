@@ -24,16 +24,19 @@ export function generateLawInteractions(laws: UniverseLaws, rng: RandomStream): 
   ];
 
   return pairs.map(({ source, target, kind }, index) => {
-    const impactBase = Math.abs(source.value - target.value) + rng.int(4, 16);
-    const impact = round(clamp(kind === "synergy" ? impactBase : -impactBase, -40, 40));
-    return {
-      id: `interaction-${index + 1}`,
-      sourceLawId: source.id,
-      targetLawId: target.id,
-      kind,
-      impact,
-      explanation: interactionExplanation(source, target, kind, impact),
-    };
+    const id = `interaction-${index + 1}`;
+    return rng.withScope(`law-interaction:${id}`, (scoped) => {
+      const impactBase = Math.abs(source.value - target.value) + scoped.int(4, 16);
+      const impact = round(clamp(kind === "synergy" ? impactBase : -impactBase, -40, 40));
+      return {
+        id,
+        sourceLawId: source.id,
+        targetLawId: target.id,
+        kind,
+        impact,
+        explanation: interactionExplanation(source, target, kind, impact),
+      };
+    });
   }).filter((interaction) => allRules.some((rule) => rule.id === interaction.sourceLawId) && allRules.some((rule) => rule.id === interaction.targetLawId));
 }
 
@@ -42,38 +45,42 @@ export function flattenStructuredLaws(laws: UniverseLaws): StructuredLaw[] {
 }
 
 function generateDomain(id: LawDomainId, template: UniverseTemplate, rng: RandomStream): LawDomain {
-  const value = round(clamp(template.weights[id] + rng.range(-13, 13)));
-  const selectedTraits = uniquePicks(lawTraits[id], rng, 3);
-  const title = `${template.name}的${lawDomainNames[id]}`;
-  const rules = generateStructuredRules(id, value, rng);
+  return rng.withScope(`law-domain:${id}`, (scoped) => {
+    const value = round(clamp(template.weights[id] + scoped.range(-13, 13)));
+    const selectedTraits = uniquePicks(lawTraits[id], scoped, 3);
+    const title = `${template.name}的${lawDomainNames[id]}`;
+    const rules = generateStructuredRules(id, value, scoped);
 
-  return {
-    id,
-    title,
-    rating: {
-      value,
-      label: labelFor(value),
-      explanation: explanationFor(id, value, template.name),
-    },
-    source: rng.pick(lawSources[id]),
-    traits: selectedTraits,
-    cost: rng.pick(lawCosts[id]),
-    rules,
-  };
+    return {
+      id,
+      title,
+      rating: {
+        value,
+        label: labelFor(value),
+        explanation: explanationFor(id, value, template.name),
+      },
+      source: scoped.pick(lawSources[id]),
+      traits: selectedTraits,
+      cost: scoped.pick(lawCosts[id]),
+      rules,
+    };
+  });
 }
 
 function generateStructuredRules(id: LawDomainId, domainValue: number, rng: RandomStream): StructuredLaw[] {
-  const catalog = uniquePicks(lawRuleCatalog[id], rng, 2);
+  const catalog = uniquePicks(lawRuleCatalog[id], rng, 2, (index) => `law:${id}:slot:${index + 1}`);
   return catalog.map((rule, index) => {
-    const value = round(clamp(domainValue + rng.range(-18, 18)));
-    return {
-      ...rule,
-      id: `${id}.${stableRuleId(rule.name)}.${index + 1}`,
-      domain: id,
-      value,
-      label: labelFor(value),
-      explanation: structuredRuleExplanation(rule.name, id, value, rule.polarity, rule.effectTargets),
-    };
+    return rng.withScope(`law:${id}:slot:${index + 1}`, (scoped) => {
+      const value = round(clamp(domainValue + scoped.range(-18, 18)));
+      return {
+        ...rule,
+        id: `${id}.${stableRuleId(rule.name)}.${index + 1}`,
+        domain: id,
+        value,
+        label: labelFor(value),
+        explanation: structuredRuleExplanation(rule.name, id, value, rule.polarity, rule.effectTargets),
+      };
+    });
   });
 }
 
@@ -132,11 +139,13 @@ function metricName(metric: MetricId): string {
   return names[metric];
 }
 
-function uniquePicks<T>(items: readonly T[], rng: RandomStream, count: number): T[] {
+function uniquePicks<T>(items: readonly T[], rng: RandomStream, count: number, scopeId?: (index: number) => string): T[] {
   const pool = [...items];
   const result: T[] = [];
   while (pool.length > 0 && result.length < count) {
-    const index = rng.int(0, pool.length - 1);
+    const index = scopeId
+      ? rng.withScope(scopeId(result.length), (scoped) => scoped.int(0, pool.length - 1))
+      : rng.int(0, pool.length - 1);
     result.push(pool.splice(index, 1)[0]);
   }
   return result;

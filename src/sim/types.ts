@@ -1,5 +1,6 @@
 import type { InterventionInput, MiracleState, TimelineEvent } from "./contracts/interventions";
 import type { EraId, EventType, MetricId } from "./contracts/foundations";
+import type { CausalGraph } from "./contracts/causality";
 
 export type {
   CreatorMode,
@@ -20,8 +21,8 @@ export type {
 
 export type { EraId, EventType, MetricId } from "./contracts/foundations";
 
-export const RULESET_VERSION = "ugs-ruleset@0.6.3";
-export const RULESET_SHORT_CODE = "UGS063";
+export const RULESET_VERSION = "ugs-ruleset@0.7.0";
+export const RULESET_SHORT_CODE = "UGS070";
 
 export type UniverseTemplateId =
   | "hard_science"
@@ -395,6 +396,7 @@ export type UniverseSummary = {
   galaxies: Galaxy[];
   civilizations: Civilization[];
   miracleState: MiracleState;
+  causalGraph: CausalGraph;
   explanations: Explanation[];
   observationLog: ObservationLog;
 };

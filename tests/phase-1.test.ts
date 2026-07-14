@@ -120,13 +120,13 @@ describe("阶段 1 宇宙生成", () => {
   });
 });
 
-describe("规则版本门禁", () => {
-  it("生成规则内容变化时必须同步更新规则版本哈希", () => {
+describe("规则与因果契约版本门禁", () => {
+  it("模拟核心内容变化时必须同步更新对应版本哈希", () => {
     const sourceRoot = pathFromTest(import.meta.url, "../src/sim");
     const actualHash = rulesetContentHash(sourceRoot);
 
     if (actualHash !== expectedRulesetContentHash) {
-      throw new Error(`生成规则内容哈希已变化。若本次变更会影响生成结果，请更新 RULESET_VERSION、RULESET_SHORT_CODE 和该测试基线。当前哈希：${actualHash}`);
+      throw new Error(`模拟核心内容哈希已变化。若领域结果变化，请更新 RULESET_VERSION 与 RULESET_SHORT_CODE；若仅因果证据契约变化，请更新 CAUSAL_GRAPH_VERSION；随后更新该测试基线。当前哈希：${actualHash}`);
     }
 
     expect(actualHash).toBe(expectedRulesetContentHash);

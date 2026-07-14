@@ -359,3 +359,51 @@
   min-height: 180px;
   resize: vertical;
 }
+.trace {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: fit-content;
+  min-height: 32px;
+  padding: 6px 9px;
+  border: 1px solid rgba(233, 196, 106, 0.35);
+  border-radius: 7px;
+  color: #e9c46a;
+  background: rgba(233, 196, 106, 0.08);
+}
+
+.trace:hover,
+.trace:focus-visible {
+  border-color: #e9c46a;
+  background: rgba(233, 196, 106, 0.16);
+}
+
+.law-tags .trace,
+.law-tags .trace:hover,
+.law-tags .trace:focus-visible {
+  color: #e9c46a;
+  background: #2b2521;
+}
+
+.result-traces {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.space-choice,
+.civilization-choice,
+.timeline-choice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.space-choice > .trace,
+.civilization-choice > .trace,
+.timeline-choice > .trace {
+  align-self: center;
+}

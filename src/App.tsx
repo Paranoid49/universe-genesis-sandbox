@@ -1,4 +1,5 @@
 import { CivilizationPanel } from "./components/CivilizationPanel";
+import { CausalExplorer } from "./components/CausalExplorer";
 import { PageNavigation, UniverseToolbar } from "./components/AppChrome";
 import { MiraclePanel } from "./components/MiraclePanel";
 import { ObservationConsole } from "./components/ObservationConsole";
@@ -10,6 +11,7 @@ import { SpaceExplorer } from "./components/SpaceExplorer";
 import { UniverseLibrary } from "./components/UniverseLibrary";
 import { useUniverseAppModel, type AppPageId } from "./ui/useUniverseAppModel";
 import { useUniverseArchive } from "./ui/useUniverseArchive";
+import type { MouseEvent } from "react";
 
 export type AppProps = {
   initialPage?: AppPageId;
@@ -19,7 +21,20 @@ export type AppProps = {
 export function App({ initialPage = "overview", search }: AppProps = {}) {
   const model = useUniverseAppModel({ initialPage, search });
   const archive = useUniverseArchive();
-  return <main className="app-shell">
+  function traceVisibleResult(event: MouseEvent<HTMLElement>) {
+    const projectionTrigger = (event.target as Element).closest<HTMLElement>("[data-p]");
+    const projectionSubjectId = projectionTrigger?.dataset.p;
+    if (projectionSubjectId) {
+      model.openStateValueProjection(projectionSubjectId);
+      return;
+    }
+    const trigger = (event.target as Element).closest<HTMLElement>("[data-t]");
+    const subjectId = trigger?.dataset.t;
+    if (!trigger || !subjectId) return;
+    const focusOrdinal = [...document.querySelectorAll<HTMLElement>(`[data-t="${subjectId}"]`)].indexOf(trigger);
+    model.openCausalSubject(subjectId, focusOrdinal);
+  }
+  return <main className="app-shell" onClick={traceVisibleResult}>
     <UniverseToolbar
       draftSeed={model.draftSeed}
       templateId={model.templateId}
@@ -32,7 +47,16 @@ export function App({ initialPage = "overview", search }: AppProps = {}) {
       onCopy={model.copyShare}
     />
     <PageNavigation activePage={model.activePage} onChange={model.setActivePage} />
-    {model.activePage === "overview" && <OverviewPage
+    {model.traceError && <p className="input-error" role="alert">{model.traceError}</p>}
+    {model.activePage === "causality" && <CausalExplorer
+      key={`${model.causalView.universe.shareCode}:${model.causalView.initialNodeId ?? "base"}`}
+      universe={model.causalView.universe}
+      graph={model.causalView.graph}
+      initialNodeId={model.causalView.initialNodeId}
+      onReturn={model.returnTrace}
+    />}
+    <div hidden={model.activePage === "causality"}>
+    {model.contentPage === "overview" && <OverviewPage
       universe={model.universe}
       shareWarnings={model.shareWarnings}
       filteredTimelineCount={model.filteredTimeline.length}
@@ -40,9 +64,13 @@ export function App({ initialPage = "overview", search }: AppProps = {}) {
       civilizationStats={model.civilizationStats}
       onNavigate={model.setActivePage}
     />}
-    {model.activePage === "observe" && <ObservationConsole key={model.universe.shareCode} universe={model.universe} />}
-    {model.activePage === "library" && <UniverseLibrary universe={model.universe} archive={archive} onRestore={model.restoreArchivedUniverse} />}
-    {model.activePage === "space" && <SpaceExplorer
+    {model.contentPage === "observe" && <ObservationConsole
+      key={model.universe.shareCode}
+      universe={model.universe}
+      onTraceCausalProjection={model.openCausalProjection}
+    />}
+    {model.contentPage === "library" && <UniverseLibrary universe={model.universe} archive={archive} onRestore={model.restoreArchivedUniverse} />}
+    {model.contentPage === "space" && <SpaceExplorer
       universe={model.universe}
       stats={model.spaceStats}
       selectedGalaxy={model.selectedGalaxy}
@@ -53,14 +81,14 @@ export function App({ initialPage = "overview", search }: AppProps = {}) {
       onSelectSystem={model.selectSystem}
       onSelectPlanet={model.selectPlanet}
     />}
-    {model.activePage === "civilizations" && <CivilizationPanel
+    {model.contentPage === "civilizations" && <CivilizationPanel
       universe={model.universe}
       stats={model.civilizationStats}
       selectedCivilization={model.selectedCivilization}
       sourceLabelById={model.sourceLabelById}
       onSelectCivilization={model.selectCivilization}
     />}
-    {model.activePage === "miracles" && <MiraclePanel
+    {model.contentPage === "miracles" && <MiraclePanel
       universe={model.universe}
       targetOptions={model.miracleTargetOptions}
       selectedMiracleType={model.selectedMiracleType}
@@ -70,7 +98,7 @@ export function App({ initialPage = "overview", search }: AppProps = {}) {
       onApplyMiracle={model.applySelectedMiracle}
       onClearInterventions={model.clearInterventions}
     />}
-    {model.activePage === "timeline" && <TimelinePage
+    {model.contentPage === "timeline" && <TimelinePage
       universe={model.universe}
       filteredTimeline={model.filteredTimeline}
       selectedEvent={model.selectedEvent}
@@ -79,7 +107,7 @@ export function App({ initialPage = "overview", search }: AppProps = {}) {
       onEraFilterChange={model.setEraFilter}
       onEventSelect={model.setSelectedEventId}
     />}
-    {model.activePage === "laws" && <LawsPage
+    {model.contentPage === "laws" && <LawsPage
       universe={model.universe}
       comparison={model.comparison}
       compareDraftSeed={model.compareDraftSeed}
@@ -87,7 +115,9 @@ export function App({ initialPage = "overview", search }: AppProps = {}) {
       sourceLabelById={model.sourceLabelById}
       onCompareDraftSeedChange={model.setCompareDraftSeed}
       onCompare={model.compareSeedNow}
+      onTraceComparison={model.traceLawComparison}
     />}
-    {model.activePage === "logs" && <LogsPage universe={model.universe} />}
+    {model.contentPage === "logs" && <LogsPage universe={model.universe} />}
+    </div>
   </main>;
 }

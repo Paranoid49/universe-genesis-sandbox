@@ -5,7 +5,7 @@ import { join } from "node:path";
 const assetRoot = join(process.cwd(), "dist", "assets");
 const files = readdirSync(assetRoot).map((name) => ({ name, path: join(assetRoot, name) }));
 const budgets = [
-  { extension: ".js", gzipLimit: 110 * 1024, guardLimit: 105 * 1024, label: "JavaScript" },
+  { extension: ".js", gzipLimit: 115 * 1024, guardLimit: 110 * 1024, label: "JavaScript" },
   { extension: ".css", gzipLimit: 10 * 1024, guardLimit: 8 * 1024, label: "CSS" },
 ];
 

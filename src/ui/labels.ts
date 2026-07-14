@@ -25,6 +25,10 @@ export function lawDomainName(key: string): string {
   return names[key] ?? key;
 }
 
+export function lawDomainTitle(key: string): string {
+  return key === "causality" ? "因果与时间法则" : `${lawDomainName(key)}法则`;
+}
+
 export function polarityName(value: string): string {
   const names: Record<string, string> = {
     support: "支撑",

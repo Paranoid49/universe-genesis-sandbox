@@ -14,5 +14,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "vitest.config.ts"]
+  "include": ["ui-runtime.config.ts", "vite.config.ts", "vitest.config.ts", "vitest.ui.config.ts"]
 }

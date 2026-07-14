@@ -34,26 +34,34 @@ type TimelineState = {
 };
 
 export function generateTimeline(template: UniverseTemplate, laws: UniverseLaws, metrics: UniverseMetrics, rng: RandomStream): TimelineEvent[] {
-  const targetCount = rng.int(30, 36);
+  const targetCount = rng.withScope("timeline:count", (scoped) => scoped.int(30, 36));
   const state = initialTimelineState(template, laws, metrics);
   const drafts: EventDraft[] = [];
 
   for (const era of timelineEraOrder) {
     const type = era === "elements" ? "elements" : era === "ascension" ? "ascension" : era;
-    const draft = createDraft(type, template, laws, metrics, rng, state, drafts, era);
+    const scopeId = nextDraftScope(drafts);
+    const draft = rng.withScope(scopeId, (scoped) => createDraft(type, template, laws, metrics, scoped, state, drafts, era));
     drafts.push(draft);
     applyEventInfluence(draft, state);
   }
 
   while (drafts.length < targetCount) {
-    const type = pickEventType(state, template, rng);
-    const era = type === "anomaly" ? rng.pick(timelineEraOrder.slice(2)) : timelineEventTypeToEra[type];
-    const draft = createDraft(type, template, laws, metrics, rng, state, drafts, era);
+    const scopeId = nextDraftScope(drafts);
+    const draft = rng.withScope(scopeId, (scoped) => {
+      const type = pickEventType(state, template, scoped);
+      const era = type === "anomaly" ? scoped.pick(timelineEraOrder.slice(2)) : timelineEventTypeToEra[type];
+      return createDraft(type, template, laws, metrics, scoped, state, drafts, era);
+    });
     drafts.push(draft);
     applyEventInfluence(draft, state);
   }
 
-  return materializeTimeline(drafts);
+  return materializeTimeline(drafts, rng);
+}
+
+function nextDraftScope(drafts: EventDraft[]): string {
+  return `timeline-draft:draft-${String(drafts.length + 1).padStart(2, "0")}`;
 }
 
 export function filterTimelineByEra(timeline: TimelineEvent[], era: EraId | "all"): TimelineEvent[] {
@@ -181,12 +189,13 @@ function pickTriggerDraft(drafts: EventDraft[], era: EraId, rng: RandomStream): 
   return rng.pick(recentCandidates);
 }
 
-function materializeTimeline(drafts: EventDraft[]): TimelineEvent[] {
+function materializeTimeline(drafts: EventDraft[], rng: RandomStream): TimelineEvent[] {
   const sorted = [...drafts].sort((left, right) => left.age - right.age || left.draftId.localeCompare(right.draftId));
   const idByDraft = new Map(sorted.map((draft, index) => [draft.draftId, `evt-${String(index + 1).padStart(2, "0")}`]));
 
   return sorted.map((draft, index) => {
     const id = idByDraft.get(draft.draftId) ?? `evt-${String(index + 1).padStart(2, "0")}`;
+    rng.renameScope(`timeline-draft:${draft.draftId}`, `timeline-event:${id}`);
     return {
       id,
       age: draft.age,

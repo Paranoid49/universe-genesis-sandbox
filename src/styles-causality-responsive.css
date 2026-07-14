@@ -1,0 +1,44 @@
+@media (max-width: 1180px) {
+  .causal-explorer-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .causal-result-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: 360px;
+  }
+}
+
+@media (max-width: 720px) {
+  .causal-explorer-header,
+  .causal-explorer-header > div {
+    align-items: stretch;
+  }
+
+  .causal-explorer-header,
+  .causal-explorer-header > div,
+  .causal-related-list,
+  .causal-result-list,
+  .causal-node-detail dl {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .causal-explorer-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .causal-search-field input,
+  .causal-path-step button,
+  .causal-node-chip {
+    width: auto;
+  }
+
+  .causal-search-field input {
+    width: 100%;
+  }
+
+  .causal-direction-tabs {
+    grid-template-columns: 1fr;
+  }
+}

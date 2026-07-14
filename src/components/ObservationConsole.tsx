@@ -10,9 +10,18 @@ import {
   type ObservationOverlay,
 } from "../ui/observationProjection";
 import { eraName } from "../ui/labels";
-import { SectionHeader } from "./common";
+import type { CausalProjectionRequest } from "../ui/causalView";
+import {
+  buildObservationCausalProjection,
+  observationTraceOptions,
+  type ObservationTraceAspect,
+} from "../ui/observationCausalProjection";
+import { SectionHeader, TraceCauseButton } from "./common";
 
-export function ObservationConsole({ universe }: { universe: UniverseSummary }) {
+export function ObservationConsole({ universe, onTraceCausalProjection }: {
+  universe: UniverseSummary;
+  onTraceCausalProjection: (request: CausalProjectionRequest) => void;
+}) {
   const [level, setLevel] = useState<ObservationLevel>("universe");
   const [galaxyId, setGalaxyId] = useState<string>();
   const [systemId, setSystemId] = useState<string>();
@@ -47,6 +56,15 @@ export function ObservationConsole({ universe }: { universe: UniverseSummary }) 
     } else if (nextLevel === "galaxy") {
       setSystemId(undefined);
     }
+  }
+
+  function traceObservation(aspect: ObservationTraceAspect, returnFocusKey: string) {
+    if (!selectedNode) return;
+    onTraceCausalProjection({
+      universe,
+      returnFocusKey,
+      buildProjection: (causalUniverse) => buildObservationCausalProjection(causalUniverse, projection, selectedNode, aspect),
+    });
   }
 
   return (
@@ -87,7 +105,7 @@ export function ObservationConsole({ universe }: { universe: UniverseSummary }) 
                   className={["observation-node", active ? "active" : "", eventRelated ? "event-related" : ""].filter(Boolean).join(" ")}
                   transform={`translate(${node.x} ${node.y})`}
                   role="button"
-                  tabIndex={0}
+                  {...{ tabindex: 0 }}
                   aria-label={`${node.label}，${overlayLabel(overlay)}强度 ${intensity}${eventRelated ? "，与当前事件关联" : ""}`}
                   onClick={() => activateNode(node)}
                   onKeyDown={(event) => {
@@ -120,6 +138,20 @@ export function ObservationConsole({ universe }: { universe: UniverseSummary }) 
             <dl>{observationOverlayOptions.map((item) => <div key={item.id}><dt>{item.label}</dt><dd>{selectedNode.intensity[item.id]}</dd></div>)}</dl>
             <small>稳定 ID：{selectedNode.id}</small>
             <small>关联时间线事件：{selectedNode.relatedEventIds.length} 条</small>
+            <section className="observation-causal-actions" aria-label="追溯当前观测">
+              <h4>追溯当前观测</h4>
+              <p>摘要以当前节点作为范围上下文；尚未手动选择时使用列表首节点。</p>
+              <div>
+                {observationTraceOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    data-causal-focus={`observation.${selectedNode.id}.action.${option.id}`}
+                    onClick={() => traceObservation(option.id, `observation.${selectedNode.id}.action.${option.id}`)}
+                  >{option.label}</button>
+                ))}
+              </div>
+            </section>
           </>}
         </aside>
       </div>
@@ -134,9 +166,16 @@ export function ObservationConsole({ universe }: { universe: UniverseSummary }) 
         </div>
         {currentEvent && <article>
           <span>{currentEvent.ageLabel}</span><strong>{currentEvent.title}</strong><p>{currentEvent.description}</p>
+          <TraceCauseButton subjectId={currentEvent.id} label={currentEvent.title} />
           <small>{eraName(currentEvent.era)} · {currentEvent.location}</small>
           <small>关联来源：{currentEvent.sourceIds.length > 0 ? currentEvent.sourceIds.join("、") : "无显式来源"}</small>
           <small>当前层级关联节点：{relatedNodeLabels(projection.nodes, currentEvent.id)}</small>
+          <button
+            type="button"
+            data-causal-focus={`observation.${selectedNode?.id}.timeline.related-events`}
+            onClick={() => selectedNode && traceObservation("related-events", `observation.${selectedNode.id}.timeline.related-events`)}
+            disabled={!selectedNode}
+          >查看当前层级事件关联原因</button>
         </article>}
       </section>
     </section>
