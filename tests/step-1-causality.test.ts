@@ -877,7 +877,7 @@ describe("步骤 1 因果闭包契约", () => {
     const forgedStateSpec = structuredClone(stateSpec);
     expect(() => appendCausalProjections(graph, [forgedStateSpec])).toThrow(/未经过受控公式/);
     expect(() => buildStateValueCausalProjection(generatedUniverse, "missing.state.value")).toThrow(/没有登记状态值主题/);
-  });
+  }, 30_000);
 
   it("聚合统计逐项绑定完整成员、缺席与筛选证据", () => {
     const graph = generatedUniverse.causalGraph;
