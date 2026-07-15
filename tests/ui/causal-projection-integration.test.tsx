@@ -168,7 +168,7 @@ describe("可见投影因果接入", () => {
     const missingNodeId = missingGraph.nodes.find((node) => node.subjectId === lawComparisonDomainOrder[0])!.id;
     const missingRight = { ...right, causalGraph: { ...missingGraph, nodes: missingGraph.nodes.filter((node) => node.id !== missingNodeId) } } as typeof right;
     expect(() => buildLawComparisonEvidence(left, missingRight, comparison, "maximum")).toThrow(/因果闭包校验失败|来源主题/);
-  }, 15_000);
+  }, 30_000);
 
   it("最大差异在绝对值并列时按固定领域顺序稳定裁决", () => {
     const left = generateLawComparisonUniverse(

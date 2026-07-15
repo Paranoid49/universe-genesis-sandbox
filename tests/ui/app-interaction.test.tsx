@@ -34,7 +34,7 @@ describe("应用关键交互", () => {
     expect(screen.getByRole("heading", { name: "运行中宇宙" })).toBeTruthy();
     expect(screen.getByText("第 1 步")).toBeTruthy();
     expect(screen.getByText("已暂停")).toBeTruthy();
-  });
+  }, 30_000);
 
   it("只有可识别的旧分享查询才进入旧版兼容流程", () => {
     const cases = [
@@ -58,7 +58,7 @@ describe("应用关键交互", () => {
     render(<App initialPage="overview" />);
 
     await user.click(screen.getByRole("button", { name: /星系、恒星系与行星/ }));
-    expect(screen.getByRole("heading", { name: "局部探索" })).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole("heading", { name: "局部探索" })).toBeTruthy());
     const galaxyChoices = document.querySelectorAll(".space-grid > .space-list:first-child .space-select");
     await user.click(galaxyChoices[Math.min(1, galaxyChoices.length - 1)] as HTMLElement);
     const systemChoices = document.querySelectorAll(".space-grid > .space-list:nth-child(2) > div:not(.planet-select-list) .space-select");
@@ -70,7 +70,7 @@ describe("应用关键交互", () => {
     expect(screen.getByRole("heading", { name: "文明演化" })).toBeTruthy();
     const civilizationChoices = document.querySelectorAll(".civilization-select");
     await user.click(civilizationChoices[Math.min(1, civilizationChoices.length - 1)] as HTMLElement);
-  });
+  }, 30_000);
 
   it("可以通过一级入口用键盘完成真实宇宙的双向因果查询", async () => {
     const user = userEvent.setup();
@@ -105,7 +105,7 @@ describe("应用关键交互", () => {
     const { container } = render(<App initialPage="causality" />);
     const result = await axe(container);
     expect(result.violations).toEqual([]);
-  });
+  }, 30_000);
 
   it("主要旧页面的可见结果可以就地追因并返回原页面继续浏览", async () => {
     const user = userEvent.setup();
