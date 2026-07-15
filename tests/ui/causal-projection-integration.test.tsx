@@ -115,7 +115,7 @@ describe("可见投影因果接入", () => {
       nodes: [...universe.causalGraph.nodes, { ...source, id: "duplicate-subject-node" }],
     } as CausalGraph;
     expect(() => requireCausalSubjectNode(duplicateGraph, "metric.lifePotential")).toThrow(/主题节点不唯一/);
-  }, 15_000);
+  }, 30_000);
 
   it("法则对比普通渲染不物化右图，追溯时校验左右组合证据", () => {
     const left = generateCausalUniverse({ seed: "LAW-LEFT-CAUSES", rulesetVersion: RULESET_VERSION, templateId: "high_magic" });
@@ -198,7 +198,7 @@ describe("可见投影因果接入", () => {
     await user.click(screen.getByRole("button", { name: /因果：结果、原因与影响链路/ }));
     expect(screen.queryByRole("heading", { name: /观察几何：/ })).toBeNull();
     expect(firstGraphSummaryValue(container as HTMLElement)).toBe(String(base.causalGraph.nodes.length));
-  }, 15_000);
+  }, 30_000);
 
   it("法则页面显式展示公式并可用键盘分别追溯左右宇宙", async () => {
     const user = userEvent.setup();

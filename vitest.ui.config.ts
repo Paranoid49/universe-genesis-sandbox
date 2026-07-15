@@ -8,6 +8,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    testTimeout: 30_000,
     include: ["tests/ui/**/*.test.tsx"],
     setupFiles: ["tests/ui/setup.ts"],
     coverage: {

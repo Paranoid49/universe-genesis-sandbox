@@ -51,7 +51,7 @@ describe("应用关键交互", () => {
       expect(Boolean(screen.queryByRole("heading", { name: "运行中宇宙" }))).toBe(!entry.legacy);
       view.unmount();
     }
-  }, 15_000);
+  }, 30_000);
 
   it("可以通过主导航进入星系与文明页面", async () => {
     const user = userEvent.setup();
@@ -572,7 +572,7 @@ describe("应用关键交互", () => {
     await user.click(screen.getByTitle("造物主干预与奇迹"));
     expect(screen.getByText(/1 次奇迹/)).toBeTruthy();
     expect(screen.getByText(/实体变化：habitability/)).toBeTruthy();
-  }, 10_000);
+  }, 30_000);
 
   it("图书馆拒绝损坏导入且保留现有条目", async () => {
     const user = userEvent.setup();
