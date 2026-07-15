@@ -16,7 +16,7 @@ export const fixedSeeds = [
 export const lawDomainIds: LawDomainId[] = ["physics", "magic", "life", "consciousness", "divinity", "causality"];
 export const metricIds: MetricId[] = ["age", "stability", "lifePotential", "civilizationPotential", "magicIntensity", "divineActivity", "causalityIntegrity"];
 export const eraIds: EraId[] = ["creation", "stars", "elements", "life", "civilization", "myth", "ascension", "ending"];
-export const expectedRulesetContentHash = "3feb1c642af564a8217205fab0deee5bceb1f8b592c7087b02f6404a3fc111c4";
+export const expectedRulesetContentHash = "ba2f3b893d1e88274ee1c97888b0a181c26d58aac6ccb20d81be429b6aea6aea";
 
 export function expectCompleteUniverse(universe: UniverseSummary): void {
   expect(universe.seed).not.toBe("");

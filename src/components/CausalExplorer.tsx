@@ -1,4 +1,5 @@
-import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useId, useMemo, useRef, useState } from "preact/hooks";
+import type { KeyboardEvent } from "react";
 import {
   type CausalGraph,
   type CausalNode,
@@ -37,7 +38,7 @@ export function CausalExplorer({ universe, graph, initialNodeId, selectedNodeId,
   const causesPanelId = useId();
   const effectsPanelId = useId();
   const resultButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const directionButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const directionButtonsRef = useRef<Array<HTMLButtonElement | null>>([]);
   const nodeById = useMemo(() => new Map(graph.nodes.map((node) => [node.id, node])), [graph.nodes]);
   const requestedNodeId = selectedNodeId ?? initialNodeId;
   const invalidRequestedNodeId = requestedNodeId && !nodeById.has(requestedNodeId) ? requestedNodeId : undefined;
@@ -131,7 +132,7 @@ export function CausalExplorer({ universe, graph, initialNodeId, selectedNodeId,
     const nextDirection: QueryDirection = nextIndex === 0 ? "causes" : "effects";
     setDirection(nextDirection);
     setShowAllReachable(false);
-    directionButtonRefs.current[nextIndex]?.focus();
+    directionButtonsRef.current[nextIndex]?.focus();
   }
 
   return (
@@ -217,7 +218,7 @@ export function CausalExplorer({ universe, graph, initialNodeId, selectedNodeId,
 
           <div className="causal-direction-tabs" role="tablist" aria-label="因果查询方向">
             <button
-              ref={(element) => { directionButtonRefs.current[0] = element; }}
+              ref={(element) => { directionButtonsRef.current[0] = element; }}
               id={`${causesPanelId}-tab`}
               type="button"
               role="tab"
@@ -234,7 +235,7 @@ export function CausalExplorer({ universe, graph, initialNodeId, selectedNodeId,
               为什么发生
             </button>
             <button
-              ref={(element) => { directionButtonRefs.current[1] = element; }}
+              ref={(element) => { directionButtonsRef.current[1] = element; }}
               id={`${effectsPanelId}-tab`}
               type="button"
               role="tab"

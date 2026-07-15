@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Radar } from "./icons";
-import { useMemo, useState } from "react";
+import { useMemo, useState } from "preact/hooks";
 import type { UniverseSummary } from "../sim";
 import {
   buildObservationProjection,
@@ -158,11 +158,11 @@ export function ObservationConsole({ universe, onTraceCausalProjection }: {
 
       <section className="observation-timeline" aria-label="时间线逐事件浏览">
         <div className="timeline-playback-controls">
-          <button type="button" onClick={() => setEventIndex(0)} disabled={eventIndex === 0} title="第一条事件"><ChevronsLeft size={16} />第一条</button>
-          <button type="button" onClick={() => setEventIndex((value) => Math.max(0, value - 1))} disabled={eventIndex === 0} title="上一条事件"><ChevronLeft size={16} />上一条</button>
+          <button type="button" onClick={() => setEventIndex(0)} disabled={eventIndex === 0}><ChevronsLeft size={16} />第一条</button>
+          <button type="button" onClick={() => setEventIndex((value) => Math.max(0, value - 1))} disabled={eventIndex === 0}><ChevronLeft size={16} />上一条</button>
           <label><span>时间位置 {eventIndex + 1} / {universe.timeline.length}</span><input type="range" min="0" max={Math.max(0, universe.timeline.length - 1)} value={eventIndex} onChange={(event) => setEventIndex(Number(event.target.value))} /></label>
-          <button type="button" onClick={() => setEventIndex((value) => Math.min(universe.timeline.length - 1, value + 1))} disabled={eventIndex >= universe.timeline.length - 1} title="下一条事件"><ChevronRight size={16} />下一条</button>
-          <button type="button" onClick={() => setEventIndex(universe.timeline.length - 1)} disabled={eventIndex >= universe.timeline.length - 1} title="最后一条事件"><ChevronsRight size={16} />最后一条</button>
+          <button type="button" onClick={() => setEventIndex((value) => Math.min(universe.timeline.length - 1, value + 1))} disabled={eventIndex >= universe.timeline.length - 1}><ChevronRight size={16} />下一条</button>
+          <button type="button" onClick={() => setEventIndex(universe.timeline.length - 1)} disabled={eventIndex >= universe.timeline.length - 1}><ChevronsRight size={16} />最后一条</button>
         </div>
         {currentEvent && <article>
           <span>{currentEvent.ageLabel}</span><strong>{currentEvent.title}</strong><p>{currentEvent.description}</p>

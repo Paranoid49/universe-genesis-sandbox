@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
   advanceUniverseState,
   buildRuntimeCausalNetwork,
@@ -7,34 +7,31 @@ import {
   createRuntimeArchive,
   projectRuntimeEvents,
   restoreRuntimeArchive,
+  restoreUniverseState,
   runtimeDirectCauses,
   runtimeDirectEffects,
   runtimeObjectAtTick,
   type SimulationSpeed,
-  type UniverseTemplateId,
-} from "../sim";
+  type UniverseConstitution,
+} from "../sim/current";
 import { browserRuntimeStorage, type RuntimeStorageAdapter } from "./runtimeStorage";
 import { startRuntimeStepScheduler } from "./runtimeScheduler";
+import { summarizeRuntimeArchives } from "./runtimeArchiveSummaries";
 
 export const CONTINUOUS_STEP_BUDGET = 100;
-
 export function useRuntimeUniverseModel({
   seed,
-  templateId,
+  constitution,
   storage = browserRuntimeStorage,
   active = true,
-}: {
-  seed: string;
-  templateId: UniverseTemplateId;
-  storage?: RuntimeStorageAdapter;
-  active?: boolean;
-}) {
-  const [state, setState] = useState(() => createInitialUniverseState({ seed, templateId }));
+}: { seed: string; constitution: UniverseConstitution; storage?: RuntimeStorageAdapter; active?: boolean }) {
+  const [state, setState] = useState(() => createInitialUniverseState({ seed, constitution }));
   const [historyTick, setHistoryTick] = useState(0);
   const [status, setStatus] = useState<string>();
   const [error, setError] = useState<string>();
   const [causalNodeId, setCausalNodeId] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [archiveSummaries, setArchiveSummaries] = useState<readonly { stateId: string; step: number; tick: number }[]>([]);
   const operationInProgress = useRef(false);
   const continuousStepCount = useRef(0);
 
@@ -51,6 +48,15 @@ export function useRuntimeUniverseModel({
     });
     return scheduler.stop;
   }, [active, state.clock.status, state.clock.speed]);
+
+  useEffect(() => {
+    if (!active) return undefined;
+    let cancelled = false;
+    storage.list().then((archives) => {
+      if (!cancelled) setArchiveSummaries(summarizeRuntimeArchives(archives, state.identity.universeDefinitionId));
+    }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [active, state.identity.universeDefinitionId, storage]);
 
   const events = useMemo(() => projectRuntimeEvents(state), [state]);
   const causalNetwork = useMemo(() => buildRuntimeCausalNetwork(state), [state]);
@@ -95,6 +101,18 @@ export function useRuntimeUniverseModel({
     setState((current) => configureUniverseClock(current, { speed }));
   }
 
+  function replaceState(nextState: typeof state, message?: string) {
+    if (operationInProgress.current) return false;
+    const restored = configureUniverseClock(restoreUniverseState(nextState), { status: "paused" });
+    setState(restored);
+    setHistoryTick(restored.clock.tick);
+    setCausalNodeId(undefined);
+    continuousStepCount.current = 0;
+    setStatus(message);
+    setError(undefined);
+    return true;
+  }
+
   async function save() {
     if (operationInProgress.current) return;
     operationInProgress.current = true;
@@ -105,6 +123,7 @@ export function useRuntimeUniverseModel({
     try {
       const archive = createRuntimeArchive(paused);
       await storage.put(archive);
+      setArchiveSummaries((current) => Object.freeze([...current.filter((entry) => entry.stateId !== archive.stateId), { stateId: archive.stateId, step: archive.state.clock.step, tick: archive.state.clock.tick }].sort((left, right) => right.step - left.step)));
       setStatus(`已保存检查点：第 ${paused.clock.step} 步`);
       setError(undefined);
     } catch (cause) {
@@ -123,10 +142,7 @@ export function useRuntimeUniverseModel({
     continuousStepCount.current = 0;
     setBusy(true);
     try {
-      const archives = (await storage.list()).filter((archive) => archive.universeDefinitionId === paused.identity.universeDefinitionId);
-      const latest = [...archives].sort((left, right) => right.state.clock.step - left.state.clock.step)[0];
-      if (!latest) throw new Error("当前宇宙没有可恢复的运行检查点。");
-      const restored = configureUniverseClock(restoreRuntimeArchive(latest), { status: "paused" });
+      const restored = (await loadLatestCheckpoint(paused.identity.universeDefinitionId)).state;
       setState(restored);
       continuousStepCount.current = 0;
       setHistoryTick(restored.clock.tick);
@@ -140,26 +156,18 @@ export function useRuntimeUniverseModel({
     }
   }
 
+  async function loadLatestCheckpoint(universeDefinitionId = state.identity.universeDefinitionId) {
+    const archives = (await storage.list()).filter((archive) => archive.universeDefinitionId === universeDefinitionId);
+    setArchiveSummaries(summarizeRuntimeArchives(archives, universeDefinitionId));
+    const latest = [...archives].sort((left, right) => right.state.clock.step - left.state.clock.step)[0];
+    if (!latest) throw new Error("当前宇宙没有可恢复的运行检查点。");
+    return { state: configureUniverseClock(restoreRuntimeArchive(latest), { status: "paused" }), checkpointId: latest.stateId };
+  }
+
   return {
-    state,
-    events,
-    historyTick,
-    viewedObject,
-    status,
-    error,
-    busy,
-    advance,
-    toggleRunning,
-    pause,
-    changeSpeed,
-    setHistoryTick,
-    save,
-    restoreLatest,
-    causalNetwork,
-    causalNode,
-    directCauses,
-    directEffects,
-    setCausalNodeId,
+    state, events, historyTick, viewedObject, status, error, busy, archiveSummaries,
+    advance, toggleRunning, pause, changeSpeed, replaceState, setHistoryTick, save, restoreLatest, loadLatestCheckpoint,
+    causalNetwork, causalNode, directCauses, directEffects, setCausalNodeId,
   };
 }
 

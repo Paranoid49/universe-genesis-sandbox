@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from "preact/hooks";
 import {
   appendCausalProjections,
   type CausalGraph,
@@ -65,10 +65,10 @@ export function useCausalViewController<PageId extends string>(initialPage: Page
     setOverride(undefined);
     requestAnimationFrame(() => {
       if (context.focusKey) {
-        document.querySelector<HTMLElement>(`[data-causal-focus="${context.focusKey}"]`)?.focus();
+        document.querySelector<HTMLElement>(`[data-causal-focus="${context.focusKey}"]`)?.focus({ preventScroll: true });
       } else if (context.focusSubjectId) {
         const targets = document.querySelectorAll<HTMLElement>(`[data-t="${context.focusSubjectId}"]`);
-        targets[context.focusOrdinal ?? 0]?.focus();
+        targets[context.focusOrdinal ?? 0]?.focus({ preventScroll: true });
       }
       window.scrollTo(context.scrollX, context.scrollY);
     });

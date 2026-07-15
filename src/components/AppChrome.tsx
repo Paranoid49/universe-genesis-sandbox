@@ -59,13 +59,13 @@ export function UniverseToolbar({
             {UNIVERSE_TEMPLATES.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
           </select>
         </label>
-        <button className="primary-action" type="button" onClick={onCreate} title="按当前 seed 创世">
+        <button className="primary-action" type="button" onClick={onCreate}>
           <Sparkles size={17} />创世
         </button>
-        <button className="icon-action" type="button" onClick={onRandomize} title="随机 seed">
+        <button className="icon-action" type="button" onClick={onRandomize}>
           <Dices size={17} />随机
         </button>
-        {showShare && <button className="icon-action" type="button" onClick={onCopy} title="复制旧版分享文本和链接">
+        {showShare && <button className="icon-action" type="button" onClick={onCopy}>
           <Clipboard size={17} />{copyState}
         </button>}
         {inputError && <p className="input-error" id="seed-input-error" role="alert">{inputError}</p>}
@@ -89,15 +89,4 @@ export function PageNavigation({ activePage, onChange }: { activePage: AppPageId
       })}
     </nav>
   );
-}
-
-export function RuntimeNavigation({ onOpenLegacy, disabled = false }: { onOpenLegacy: () => void; disabled?: boolean }) {
-  return <nav className="page-navigation" aria-label="主页面导航">
-    <button aria-current="page" aria-label="运行：持续演化、时间控制与检查点" className="active" type="button" title="持续演化、时间控制与检查点">
-      <Sparkles size={17} /><span>运行</span><small>持续演化、时间控制与检查点</small>
-    </button>
-    <button aria-label="旧版兼容：隔离查看步骤 1 静态宇宙" disabled={disabled} type="button" title="隔离查看步骤 1 静态宇宙" onClick={onOpenLegacy}>
-      <BookOpen size={17} /><span>旧版兼容</span><small>隔离查看步骤 1 静态宇宙</small>
-    </button>
-  </nav>;
 }

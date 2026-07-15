@@ -1,11 +1,11 @@
-import type { UniverseTemplateId } from "../types";
-
-export const UNIVERSE_STATE_VERSION = "ugs-universe-state@2";
-export const UNIVERSE_DEFINITION_VERSION = "ugs-universe-definition@1";
+import type { DeclarativeRule, RuleExecutionRecord, UniverseConstitution } from "./constitution";
+import type { AutonomyState, AutonomyTransition } from "./autonomy";
+export const UNIVERSE_STATE_VERSION = "ugs-universe-state@6";
+export const UNIVERSE_DEFINITION_VERSION = "ugs-universe-definition@4";
 export const SIMULATION_CLOCK_VERSION = "ugs-simulation-clock@1";
-export const STATE_TRANSITION_VERSION = "ugs-state-transition@2";
+export const STATE_TRANSITION_VERSION = "ugs-state-transition@4";
 export const RUNTIME_RANDOM_STATE_VERSION = "ugs-runtime-random@1";
-export const RUNTIME_ARCHIVE_VERSION = "ugs-runtime-archive@2";
+export const RUNTIME_ARCHIVE_VERSION = "ugs-runtime-archive@6";
 
 export type SimulationRunStatus = "paused" | "running";
 export type SimulationSpeed = 1 | 2 | 4 | 8;
@@ -43,14 +43,14 @@ export type UniverseDefinition = {
   version: typeof UNIVERSE_DEFINITION_VERSION;
   universeDefinitionId: string;
   seed: string;
-  rulesetVersion: string;
-  templateId: UniverseTemplateId;
+  constitutionId: string;
+  constitution: UniverseConstitution;
   initialInputIds: readonly string[];
 };
 
 export type UniverseRuntimeIdentity = UniverseDefinition;
 
-export type RuntimeObjectStatus = "forming" | "stable" | "decaying" | "destroyed";
+export type RuntimeObjectStatus = string;
 
 export type RuntimeWorldObject = {
   id: string;
@@ -62,11 +62,22 @@ export type RuntimeWorldObject = {
   attributes: Readonly<Record<string, string | number | boolean | null>>;
 };
 
-export type RuntimeRule = {
+export type RuntimeWorldRelation = {
   id: string;
-  kind: "object-evolution";
-  parameters: Readonly<Record<string, number>>;
+  typeId: string;
+  name: string;
+  sourceObjectId: string;
+  targetObjectId: string;
+  directed: boolean;
 };
+
+export type RuntimeTopology = {
+  mode: "hierarchical" | "relational" | "semantic";
+  relationTypeIds: readonly string[];
+  relations: Readonly<Record<string, RuntimeWorldRelation>>;
+};
+
+export type RuntimeRule = DeclarativeRule;
 
 export type TransitionInput = {
   id: string;
@@ -96,7 +107,9 @@ export type StateTransition = {
   ruleIds: readonly string[];
   randomDecisionIds: readonly string[];
   randomDecisions: readonly RuntimeRandomDecision[];
+  ruleExecutions: readonly RuleExecutionRecord[];
   differences: readonly StateDiffOperation[];
+  autonomy: AutonomyTransition;
 };
 
 export type UniverseState = {
@@ -106,6 +119,8 @@ export type UniverseState = {
   clock: SimulationClock;
   rules: readonly RuntimeRule[];
   objects: Readonly<Record<string, RuntimeWorldObject>>;
+  topology: RuntimeTopology;
+  autonomy: AutonomyState;
   randomStreams: Readonly<Record<string, RuntimeRandomState>>;
   inputLog: readonly TransitionInput[];
   transitions: readonly StateTransition[];
@@ -144,7 +159,7 @@ export type RuntimeStorageAdapter = {
   remove: (stateId: string) => Promise<void>;
 };
 
-export type RuntimeCausalNodeKind = "root" | "rule" | "state" | "input" | "random" | "difference" | "transition" | "event";
+export type RuntimeCausalNodeKind = "root" | "rule" | "evaluation" | "state" | "input" | "random" | "difference" | "transition" | "event" | "entity" | "perception" | "memory" | "belief" | "intent" | "action" | "relation" | "narrative" | "myth";
 
 export type RuntimeCausalNode = {
   id: string;
@@ -161,11 +176,11 @@ export type RuntimeCausalEdge = {
   id: string;
   from: string;
   to: string;
-  relation: "permits" | "precedes" | "selects" | "changes" | "projects";
+  relation: "permits" | "precedes" | "selects" | "evaluates" | "changes" | "projects" | "perceives" | "remembers" | "believes" | "intends" | "acts" | "relates" | "narrates" | "archives";
 };
 
 export type RuntimeCausalNetwork = {
-  version: "ugs-runtime-causality@1";
+  version: "ugs-runtime-causality@6";
   universeDefinitionId: string;
   stateId: string;
   rootNodeIds: readonly string[];

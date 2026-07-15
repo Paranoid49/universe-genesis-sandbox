@@ -2,127 +2,148 @@ import {
   STATE_TRANSITION_VERSION,
   UNIVERSE_DEFINITION_VERSION,
   UNIVERSE_STATE_VERSION,
-  type RuntimeRule,
+  type RuntimeRandomDecision,
+  type RuntimeRandomState,
   type RuntimeWorldObject,
   type StateDiffOperation,
   type StateTransition,
   type TransitionInput,
   type UniverseState,
 } from "./contracts/runtime";
-import { getTemplate } from "./templates";
-import {
-  advanceSimulationClock,
-  createSimulationClock,
-  setSimulationRunStatus,
-  setSimulationSpeed,
-} from "./runtime-clock";
+import type {
+  ActionModuleSpec,
+  BoundaryModuleSpec,
+  ConstitutionWorldObject,
+  InterventionModuleSpec,
+  OntologyModuleSpec,
+  RuleExecutionRecord,
+  UniverseConstitution,
+} from "./contracts/constitution";
+import { assertUniverseConstitution, constitutionModule } from "./constitution-validation";
+import { executeConstitutionStep } from "./constitution-executor";
+import { advanceSimulationClock, createSimulationClock, setSimulationRunStatus, setSimulationSpeed } from "./runtime-clock";
 import { runtimeFingerprint } from "./runtime-integrity";
 import { createRuntimeRandomStream } from "./runtime-random";
-import { clamp, normalizeSeed } from "./random";
-import { RULESET_VERSION, type UniverseTemplateId } from "./types";
+import { normalizeSeed } from "./random";
 import type { SimulationRunStatus, SimulationSpeed } from "./contracts/runtime";
+import { inputAdjustments } from "./branch-inputs";
+import { createRuntimeTopology } from "./runtime-topology";
+import { completeAutonomyStep, createInitialAutonomyState, prepareAutonomyStep } from "./autonomy";
+import { assertRuntimeStateIntegrity, runtimeLogicalClockIdentity, runtimeStateId } from "./runtime-state-integrity";
 
-export type CreateUniverseStateInput = {
-  seed: string;
-  rulesetVersion?: string;
-  templateId: UniverseTemplateId;
-};
+export type CreateUniverseStateInput = { seed: string; constitution: UniverseConstitution };
 
-const PRIMARY_STREAM = "evolution.primary";
-const PRIMARY_OBJECT = "runtime.galaxy.primary";
+const PRIMARY_STREAM = "constitution.evolution";
 
 export function createInitialUniverseState(input: CreateUniverseStateInput): UniverseState {
   const seed = normalizeSeed(input.seed);
-  const rulesetVersion = input.rulesetVersion ?? RULESET_VERSION;
-  if (rulesetVersion !== RULESET_VERSION) throw new Error("运行时当前只接受明确匹配的规则版本。");
-  const template = getTemplate(input.templateId);
-  const universeDefinitionId = `runtime-definition:${runtimeFingerprint({ seed, rulesetVersion, templateId: template.id })}`;
-  const rules = createRuntimeRules(template.stabilityBias, template.weights.physics, template.weights.magic);
-  const object = freezeObject({
-    id: PRIMARY_OBJECT,
-    kind: "galaxy",
-    status: "forming",
-    revision: 0,
-    createdAtTick: 0,
-    updatedAtTick: 0,
-    attributes: {
-      cohesion: clamp(Math.round(10 + template.weights.physics / 4)),
-      energy: clamp(Math.round(65 + template.weights.magic / 5)),
-      resonance: clamp(template.weights.causality),
-    },
-  });
-  const random = createRuntimeRandomStream(runtimeSeedMaterial(seed, rulesetVersion, template.id), PRIMARY_STREAM);
+  const constitution = assertUniverseConstitution(input.constitution);
+  const universeDefinitionId = "runtime-definition:" + runtimeFingerprint({ seed, constitution });
+  const ontology = constitutionModule<OntologyModuleSpec>(constitution, "ontology").spec;
+  const rules = constitutionModule<ActionModuleSpec>(constitution, "action").spec.rules;
+  const boundary = constitutionModule<BoundaryModuleSpec>(constitution, "boundary").spec;
+  const objectEntries = ontology.objectKinds.flatMap((kind) => Array.from({ length: kind.initialCount ?? 1 }, (_, instanceIndex) => ({ kind, instanceIndex })));
+  if (objectEntries.length > boundary.maximumObjects) throw new Error("OBJECT_BUDGET｜objects｜初始对象数量超过宪法预算。");
+  const objects = Object.fromEntries(objectEntries.map(({ kind, instanceIndex }, index) => {
+    const object = freezeObject({
+      id: "runtime.object." + String(index + 1).padStart(2, "0"),
+      kind: kind.id,
+      status: kind.initialStatus,
+      revision: 0,
+      createdAtTick: 0,
+      updatedAtTick: 0,
+      attributes: Object.fromEntries(kind.attributes.map((attribute) => [attribute.id, attribute.initial])),
+    });
+    return [object.id, object, instanceIndex] as const;
+  }).map(([id, object]) => [id, object]));
+  const topology = createRuntimeTopology(constitution, objects);
+  if (Object.keys(topology.relations).length > boundary.maximumRelations) throw new Error("RELATION_BUDGET｜relations｜初始关系数量超过宪法预算。");
+  const random = createRuntimeRandomStream(runtimeSeedMaterial(seed, constitution), PRIMARY_STREAM);
   const core = {
     version: UNIVERSE_STATE_VERSION,
     identity: {
       version: UNIVERSE_DEFINITION_VERSION,
       universeDefinitionId,
       seed,
-      rulesetVersion,
-      templateId: template.id,
+      constitutionId: constitution.constitutionId,
+      constitution,
       initialInputIds: Object.freeze([]),
     },
     clock: createSimulationClock(),
     rules,
-    objects: { [object.id]: object },
+    objects,
+    topology,
+    autonomy: createInitialAutonomyState(),
     randomStreams: { [random.streamId]: random.snapshot() },
     inputLog: [],
     transitions: [],
     committedTransitionIds: [],
   } satisfies Omit<UniverseState, "id">;
-  return freezeState({ ...core, id: stateId(core) });
+  return freezeState({ ...core, id: runtimeStateId(core) });
 }
 
 export function advanceUniverseState(state: UniverseState, inputs: readonly TransitionInput[] = []): UniverseState {
-  assertUniverseState(state);
+  assertRuntimeStateIntegrity(state);
+  return advanceValidatedUniverseState(state, inputs);
+}
+
+/** 仅供语义重放使用，调用方必须从已校验初态开始并逐步比较每个转换。 */
+export function advanceUniverseStateForSemanticReplay(state: UniverseState, inputs: readonly TransitionInput[] = []): UniverseState {
+  return advanceValidatedUniverseState(state, inputs);
+}
+
+function advanceValidatedUniverseState(state: UniverseState, inputs: readonly TransitionInput[]): UniverseState {
   const orderedInputs = normalizeTransitionInputs(state, inputs);
-  const rule = state.rules.find((entry) => entry.id === "runtime.rule.structural-evolution@1");
-  if (!rule) throw new Error("运行状态缺少结构演化规则。");
-  const object = state.objects[PRIMARY_OBJECT];
-  if (!object) throw new Error("运行状态缺少主空间对象。");
   const savedRandom = Object.values(state.randomStreams).find((entry) => entry.namespace === PRIMARY_STREAM);
-  if (!savedRandom) throw new Error("运行状态缺少主随机流。");
-  const random = createRuntimeRandomStream(runtimeSeedMaterial(
-    state.identity.seed,
-    state.identity.rulesetVersion,
-    state.identity.templateId,
-  ), PRIMARY_STREAM, savedRandom);
-  const cohesionDecision = random.int(-2, 2);
-  const cohesionRandomDecision = requiredDecision(random.lastDecision);
-  const cohesionDecisionId = cohesionRandomDecision.id;
-  const energyDecision = random.int(-2, 2);
-  const energyRandomDecision = requiredDecision(random.lastDecision);
-  const energyDecisionId = energyRandomDecision.id;
-  const beforeCohesion = numericAttribute(object, "cohesion");
-  const beforeEnergy = numericAttribute(object, "energy");
-  const cohesion = clamp(beforeCohesion + rule.parameters.cohesionGrowth + cohesionDecision);
-  const energy = clamp(beforeEnergy + rule.parameters.energyDrift + energyDecision);
-  const status = nextStatus(object.status, cohesion, energy);
+  if (!savedRandom) throw new Error("运行状态缺少宪法随机流。");
+  let random = createRuntimeRandomStream(runtimeSeedMaterial(state.identity.seed, state.identity.constitution), PRIMARY_STREAM, savedRandom);
+  const randomDecisions: RuntimeRandomDecision[] = [];
+  let randomCheckpoint: { state: RuntimeRandomState; decisionCount: number } | undefined;
+  const autonomyPreparation = prepareAutonomyStep(state);
+  const result = executeConstitutionStep(
+    state.identity.constitution,
+    state.objects,
+    {
+      int(minimum, maximum) {
+        const value = random.int(minimum, maximum);
+        const decision = random.lastDecision;
+        if (!decision) throw new Error("运行随机决定记录缺失。");
+        randomDecisions.push(decision);
+        return { id: decision.id, value };
+      },
+      checkpoint() {
+        randomCheckpoint = { state: random.snapshot(), decisionCount: randomDecisions.length };
+      },
+      rollback() {
+        random = createRuntimeRandomStream(runtimeSeedMaterial(state.identity.seed, state.identity.constitution), PRIMARY_STREAM, randomCheckpoint!.state);
+        randomDecisions.splice(randomCheckpoint!.decisionCount);
+      },
+    },
+    state.clock.tick,
+    inputAdjustments(state, orderedInputs),
+    autonomyPreparation.autonomousRuleIdsByObject,
+  );
+  const autonomyResult = completeAutonomyStep(state, autonomyPreparation, result, state.clock.tick + 1);
+  const boundary = constitutionModule<BoundaryModuleSpec>(state.identity.constitution, "boundary").spec;
+  if (Object.keys(result.objects).length > boundary.maximumObjects) throw new Error("OBJECT_BUDGET｜objects｜转换后对象数量超过宪法预算。");
+  const ruleExecutions = Object.freeze([...result.records, ...inputExecutionRecords(orderedInputs, state.identity.constitution)]);
   const nextClock = advanceSimulationClock(state.clock);
-  const nextObject = freezeObject({
-    ...object,
-    status,
-    revision: object.revision + 1,
-    updatedAtTick: nextClock.tick,
-    attributes: { ...object.attributes, cohesion, energy },
-  });
   const differences = freezeDifferences([
-    difference(object.id, "attributes.cohesion", beforeCohesion, cohesion, rule.id, cohesionDecisionId),
-    difference(object.id, "attributes.energy", beforeEnergy, energy, rule.id, energyDecisionId),
-    ...(object.status === status ? [] : [difference(object.id, "status", object.status, status, rule.id)]),
-    difference(object.id, "revision", object.revision, nextObject.revision, rule.id),
-    difference(object.id, "updatedAtTick", object.updatedAtTick, nextObject.updatedAtTick, rule.id),
+    ...result.differences.map((entry) => Object.freeze({ operation: "update" as const, ...entry })),
+    ...objectMetadataDifferences(state.objects, result.objects, ruleExecutions),
   ]);
-  const randomDecisionIds = [cohesionDecisionId, energyDecisionId];
-  const transitionId = `runtime-transition:${runtimeFingerprint({
+  const randomDecisionIds = randomDecisions.map((entry) => entry.id);
+  const transitionId = "runtime-transition:" + runtimeFingerprint({
     beforeStateId: state.id,
     fromTick: state.clock.tick,
     toTick: nextClock.tick,
     inputIds: orderedInputs.map((entry) => entry.id),
+    ruleExecutions,
     randomDecisionIds,
-    randomDecisions: [cohesionRandomDecision, energyRandomDecision],
+    randomDecisions,
     differences,
-  })}`;
+    autonomy: autonomyResult.transition,
+  });
   const committedTransitionIds = [...state.committedTransitionIds, transitionId];
   const nextRandomState = random.snapshot();
   const nextCore = {
@@ -130,13 +151,15 @@ export function advanceUniverseState(state: UniverseState, inputs: readonly Tran
     identity: state.identity,
     clock: nextClock,
     rules: state.rules,
-    objects: { ...state.objects, [nextObject.id]: nextObject },
+    objects: result.objects,
+    topology: state.topology,
+    autonomy: autonomyResult.state,
     randomStreams: { ...state.randomStreams, [nextRandomState.streamId]: nextRandomState },
     inputLog: [...state.inputLog, ...orderedInputs],
     transitions: state.transitions,
     committedTransitionIds,
   } satisfies Omit<UniverseState, "id">;
-  const afterStateId = stateId(nextCore);
+  const afterStateId = runtimeStateId(nextCore);
   const transition = freezeTransition({
     version: STATE_TRANSITION_VERSION,
     id: transitionId,
@@ -145,10 +168,12 @@ export function advanceUniverseState(state: UniverseState, inputs: readonly Tran
     fromTick: state.clock.tick,
     toTick: nextClock.tick,
     inputIds: orderedInputs.map((entry) => entry.id),
-    ruleIds: [rule.id],
+    ruleIds: ruleExecutions.filter((entry) => entry.status === "applied").map((entry) => entry.ruleId),
     randomDecisionIds,
-    randomDecisions: [cohesionRandomDecision, energyRandomDecision],
+    randomDecisions,
+    ruleExecutions,
     differences,
+    autonomy: autonomyResult.transition,
   });
   return freezeState({ ...nextCore, id: afterStateId, transitions: [...state.transitions, transition] });
 }
@@ -156,9 +181,11 @@ export function advanceUniverseState(state: UniverseState, inputs: readonly Tran
 export function runtimeStateFingerprint(state: UniverseState): string {
   return runtimeFingerprint({
     identity: state.identity,
-    clock: logicalClockIdentity(state.clock),
+    clock: runtimeLogicalClockIdentity(state.clock),
     rules: state.rules,
     objects: state.objects,
+    topology: state.topology,
+    autonomy: state.autonomy,
     randomStreams: state.randomStreams,
     inputLog: state.inputLog,
     transitions: state.transitions,
@@ -168,32 +195,17 @@ export function runtimeStateFingerprint(state: UniverseState): string {
 
 export function restoreUniverseState(snapshot: UniverseState): UniverseState {
   const restored = freezeState(structuredClone(snapshot));
-  assertUniverseState(restored);
+  assertRuntimeStateIntegrity(restored);
   return restored;
 }
 
-export function configureUniverseClock(
-  state: UniverseState,
-  configuration: { status?: SimulationRunStatus; speed?: SimulationSpeed },
-): UniverseState {
-  assertUniverseState(state);
+export function configureUniverseClock(state: UniverseState, configuration: { status?: SimulationRunStatus; speed?: SimulationSpeed }): UniverseState {
+  assertRuntimeStateIntegrity(state);
   let clock = state.clock;
   if (configuration.status !== undefined) clock = setSimulationRunStatus(clock, configuration.status);
   if (configuration.speed !== undefined) clock = setSimulationSpeed(clock, configuration.speed);
   const core = { ...state, clock };
-  return freezeState({ ...core, id: stateId(core) });
-}
-
-function createRuntimeRules(stabilityBias: number, physics: number, magic: number): readonly RuntimeRule[] {
-  const energyDrift = Math.max(-4, Math.min(4, Math.round((magic - physics) / 25))) || 0;
-  return Object.freeze([Object.freeze({
-    id: "runtime.rule.structural-evolution@1",
-    kind: "object-evolution" as const,
-    parameters: Object.freeze({
-      cohesionGrowth: clamp(Math.round(10 + stabilityBias / 4), 4, 18),
-      energyDrift,
-    }),
-  })]);
+  return freezeState({ ...core, id: runtimeStateId(core) });
 }
 
 function normalizeTransitionInputs(state: UniverseState, inputs: readonly TransitionInput[]): readonly TransitionInput[] {
@@ -202,48 +214,30 @@ function normalizeTransitionInputs(state: UniverseState, inputs: readonly Transi
   const normalized = inputs.map((entry) => Object.freeze({ ...entry, payload: Object.freeze({ ...entry.payload }) }));
   for (const [index, entry] of normalized.entries()) {
     if (!entry.id || existingIds.has(entry.id)) throw new Error("状态转换输入 ID 重复或为空。");
-    if (!Number.isSafeInteger(entry.order) || entry.order <= lastOrder || (index > 0 && entry.order <= normalized[index - 1].order)) {
-      throw new Error("状态转换输入顺序无效。");
-    }
+    if (!Number.isSafeInteger(entry.order) || entry.order <= lastOrder || (index > 0 && entry.order <= normalized[index - 1].order)) throw new Error("状态转换输入顺序无效。");
     existingIds.add(entry.id);
   }
   return Object.freeze(normalized);
 }
 
-function nextStatus(current: RuntimeWorldObject["status"], cohesion: number, energy: number): RuntimeWorldObject["status"] {
-  if (energy === 0) return "destroyed";
-  if (energy <= 15) return "decaying";
-  if (current === "forming" && cohesion >= 60) return "stable";
-  return current;
-}
-
-function numericAttribute(object: RuntimeWorldObject, field: string): number {
-  const value = object.attributes[field];
-  if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(`运行对象字段 ${field} 不是有效数值。`);
-  return value;
-}
-
-function difference(
-  objectId: string,
-  field: string,
-  before: string | number | boolean | null,
-  after: string | number | boolean | null,
-  ruleId: string,
-  randomDecisionId?: string,
-): StateDiffOperation {
-  return Object.freeze({
-    operation: "update",
-    objectId,
-    field,
-    before,
-    after,
-    ruleId,
-    ...(randomDecisionId === undefined ? {} : { randomDecisionId }),
+function objectMetadataDifferences(
+  before: Readonly<Record<string, RuntimeWorldObject>>,
+  after: Readonly<Record<string, ConstitutionWorldObject>>,
+  records: readonly RuleExecutionRecord[],
+): StateDiffOperation[] {
+  return Object.values(after).flatMap((object) => {
+    const previous = before[object.id];
+    const ruleId = records.find((entry) => entry.objectId === object.id && entry.status === "applied")?.ruleId ?? "constitution.input-adjustment@1";
+    if (!previous || previous.revision === object.revision) return [];
+    return [
+      { operation: "update", objectId: object.id, field: "revision", before: previous.revision, after: object.revision, ruleId },
+      { operation: "update", objectId: object.id, field: "updatedAtTick", before: previous.updatedAtTick, after: object.updatedAtTick, ruleId },
+    ];
   });
 }
 
 function freezeDifferences(differences: StateDiffOperation[]): readonly StateDiffOperation[] {
-  return Object.freeze(differences.filter((entry) => entry.before !== entry.after));
+  return Object.freeze(differences.filter((entry) => entry.before !== entry.after).map((entry) => Object.freeze(entry)));
 }
 
 function freezeObject(object: RuntimeWorldObject): RuntimeWorldObject {
@@ -257,56 +251,72 @@ function freezeTransition(transition: StateTransition): StateTransition {
     ruleIds: Object.freeze([...transition.ruleIds]),
     randomDecisionIds: Object.freeze([...transition.randomDecisionIds]),
     randomDecisions: Object.freeze(transition.randomDecisions.map((decision) => Object.freeze({ ...decision, parameters: Object.freeze({ ...decision.parameters }) }))),
+    ruleExecutions: Object.freeze(transition.ruleExecutions.map((record) => Object.freeze({
+      ...record,
+      conditionRecords: Object.freeze([...record.conditionRecords]),
+      constraintRecords: Object.freeze([...record.constraintRecords]),
+      effectFields: Object.freeze([...record.effectFields]),
+      randomDecisionIds: Object.freeze([...record.randomDecisionIds]),
+      inputIds: Object.freeze([...record.inputIds]),
+    }))),
     differences: Object.freeze([...transition.differences]),
+    autonomy: structuredFreeze(structuredClone(transition.autonomy)),
   });
 }
 
-function requiredDecision(decision: import("./contracts/runtime").RuntimeRandomDecision | undefined) {
-  if (!decision) throw new Error("运行随机决定记录缺失。");
-  return decision;
+function inputExecutionRecords(inputs: readonly TransitionInput[], constitution: UniverseConstitution): readonly RuleExecutionRecord[] {
+  const adjustments = inputs.filter((input) => input.kind === "experiment.adjust-condition@1" || input.kind === "intervention.apply-pulse@1");
+  if (adjustments.length === 0) return Object.freeze([]);
+  const groups = new Map<string, TransitionInput[]>();
+  for (const input of adjustments) {
+    const objectId = String(input.payload.objectId ?? "");
+    groups.set(objectId, [...(groups.get(objectId) ?? []), input]);
+  }
+  return Object.freeze([...groups.entries()].map(([objectId, entries]) => {
+    const capabilities = constitutionModule<InterventionModuleSpec>(constitution, "intervention").spec.capabilities;
+    const effectFields = entries.flatMap((entry) => {
+      const capability = capabilities.find((candidate) => candidate.id === entry.payload.capabilityId);
+      return [String(entry.payload.field), ...(capability?.costField ? [capability.costField] : [])];
+    });
+    const payload = {
+      ruleId: "constitution.input-adjustment@1",
+      objectId,
+      priority: Number.MAX_SAFE_INTEGER,
+      status: "applied" as const,
+      conditionRecords: Object.freeze([]),
+      constraintRecords: Object.freeze([]),
+      effectFields: Object.freeze([...new Set(effectFields)].sort()),
+      randomDecisionIds: Object.freeze([]),
+      inputIds: Object.freeze(entries.map((entry) => entry.id)),
+      arbitration: "显式实验或宇宙内干预通过宪法能力与字段约束后原子提交。",
+    };
+    return Object.freeze({ ...payload, id: "rule-execution:" + runtimeFingerprint(payload) });
+  }));
 }
 
 function freezeState(state: UniverseState): UniverseState {
   return Object.freeze({
     ...state,
-    identity: Object.freeze({ ...state.identity, initialInputIds: Object.freeze([...state.identity.initialInputIds]) }),
+    identity: Object.freeze({ ...state.identity, constitution: structuredFreeze(state.identity.constitution), initialInputIds: Object.freeze([...state.identity.initialInputIds]) }),
     clock: Object.freeze({ ...state.clock }),
-    rules: Object.freeze(state.rules.map((rule) => Object.freeze({ ...rule, parameters: Object.freeze({ ...rule.parameters }) }))),
+    rules: Object.freeze(state.rules.map((rule) => structuredFreeze(rule))),
     objects: Object.freeze(Object.fromEntries(Object.entries(state.objects).map(([id, object]) => [id, freezeObject(object)]))),
+    topology: structuredFreeze(structuredClone(state.topology)),
+    autonomy: structuredFreeze(structuredClone(state.autonomy)),
     randomStreams: Object.freeze(Object.fromEntries(Object.entries(state.randomStreams).map(([id, random]) => [id, Object.freeze({ ...random })]))),
     inputLog: Object.freeze(state.inputLog.map((entry) => Object.freeze({ ...entry, payload: Object.freeze({ ...entry.payload }) }))),
-    transitions: Object.freeze(state.transitions.map((transition) => freezeTransition({
-      ...transition,
-      differences: transition.differences.map((entry) => Object.freeze({ ...entry })),
-    }))),
+    transitions: Object.freeze(state.transitions.map((transition) => freezeTransition({ ...transition, differences: transition.differences.map((entry) => Object.freeze({ ...entry })) }))),
     committedTransitionIds: Object.freeze([...state.committedTransitionIds]),
   });
 }
 
-function assertUniverseState(state: UniverseState): void {
-  if (state.version !== UNIVERSE_STATE_VERSION) throw new Error("宇宙运行状态版本不受支持。");
-  if (state.identity.version !== UNIVERSE_DEFINITION_VERSION) throw new Error("宇宙定义版本不受支持。");
-  if (state.id !== stateId(state)) throw new Error("宇宙运行状态身份校验失败。");
-  if (state.transitions.length !== state.committedTransitionIds.length) throw new Error("宇宙运行状态转换历史不完整。");
+function runtimeSeedMaterial(seed: string, constitution: UniverseConstitution): string {
+  return constitution.executorVersion + ":" + constitution.contentFingerprint + ":" + seed + ":runtime";
 }
 
-function stateId(state: Omit<UniverseState, "id"> | UniverseState): string {
-  return `runtime-state:${runtimeFingerprint({
-    identity: state.identity,
-    clock: logicalClockIdentity(state.clock),
-    rules: state.rules,
-    objects: state.objects,
-    randomStreams: state.randomStreams,
-    inputLog: state.inputLog,
-    committedTransitionIds: state.committedTransitionIds,
-  })}`;
-}
-
-function logicalClockIdentity(clock: UniverseState["clock"]): Pick<UniverseState["clock"], "version" | "tick" | "step"> {
-  return { version: clock.version, tick: clock.tick, step: clock.step };
-}
-
-
-function runtimeSeedMaterial(seed: string, rulesetVersion: string, templateId: UniverseTemplateId): string {
-  return `${rulesetVersion}:${templateId}:${seed}:runtime`;
+function structuredFreeze<T>(value: T): T {
+  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  Object.freeze(value);
+  for (const child of Object.values(value as Record<string, unknown>)) structuredFreeze(child);
+  return value;
 }

@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from "react";
-import type { UniverseSummary } from "../sim";
+import { useMemo, useRef, useState } from "preact/hooks";
+import { assertCausalGraph, type UniverseSummary } from "../sim";
 import {
   ArchiveError,
   filterArchiveEntries,
@@ -42,7 +42,7 @@ export function useUniverseArchive(storage: ArchiveStorage = browserArchiveStora
 
   function saveCurrent(universe: UniverseSummary, title: string) {
     try {
-      void universe.causalGraph;
+      assertCausalGraph(universe.causalGraph);
       commit(saveUniverseEntry(entriesRef.current, universe, title, clock()), "当前宇宙已保存。");
     } catch (reason) {
       setError(errorMessage(reason, "当前宇宙无法保存。"));

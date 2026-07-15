@@ -59,7 +59,7 @@ export function assertRandomResultBindingsResolve(
 ): void {
   const resolvedFingerprints = new Map<string, string>();
   for (const binding of bindings) {
-    const locatorKey = JSON.stringify(binding.locator);
+    const locatorKey = domainLocatorKey(binding.locator);
     let resolvedFingerprint = resolvedFingerprints.get(locatorKey);
     if (!resolvedFingerprint) {
       resolvedFingerprint = domainLocatorFingerprint(universe, binding.locator);
@@ -75,7 +75,18 @@ export function randomResultBindingsMatchExpected(
   actual: readonly CausalRandomResultBinding[],
   expected: readonly CausalRandomResultBinding[],
 ): boolean {
-  return JSON.stringify([...actual].sort(compareRandomBinding)) === JSON.stringify([...expected].sort(compareRandomBinding));
+  return actual.length === expected.length && actual.every((binding, index) => {
+    const counterpart = expected[index];
+    return Boolean(counterpart)
+      && binding.decisionId === counterpart.decisionId
+      && binding.resultNodeId === counterpart.resultNodeId
+      && binding.resultSubjectId === counterpart.resultSubjectId
+      && binding.nodeKind === counterpart.nodeKind
+      && binding.bindingKind === counterpart.bindingKind
+      && binding.outputValueFingerprint === counterpart.outputValueFingerprint
+      && binding.scopeId === counterpart.scopeId
+      && domainLocatorKey(binding.locator) === domainLocatorKey(counterpart.locator);
+  });
 }
 
 export function randomBindingKind(locator: CausalDomainLocator): CausalRandomResultBinding["bindingKind"] {
@@ -87,4 +98,12 @@ export function randomBindingKind(locator: CausalDomainLocator): CausalRandomRes
 
 function compareRandomBinding(left: CausalRandomResultBinding, right: CausalRandomResultBinding): number {
   return `${left.resultNodeId}\u0000${left.decisionId}`.localeCompare(`${right.resultNodeId}\u0000${right.decisionId}`);
+}
+
+function domainLocatorKey(locator: CausalDomainLocator): string {
+  if (locator.kind === "root_field") return `${locator.kind}\u0000${locator.field}`;
+  if (locator.kind === "mapping_key") return `${locator.kind}\u0000${locator.mapping}\u0000${locator.key}`;
+  if (locator.kind === "entity_id") return `${locator.kind}\u0000${locator.entityKind}\u0000${locator.entityId}\u0000${locator.containerKind}`;
+  if (locator.kind === "collection_quantity") return `${locator.kind}\u0000${locator.collection}\u0000${locator.ownerId ?? ""}`;
+  return `${locator.kind}\u0000${locator.predicate}\u0000${locator.entityId}`;
 }

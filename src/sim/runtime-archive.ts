@@ -76,7 +76,7 @@ export function parseRuntimeArchive(raw: string): RuntimeArchiveEnvelope {
   if (parsed.transitionCount !== state.transitions.length || parsed.lastTransitionId !== (state.committedTransitionIds.at(-1) ?? null)) {
     throw new RuntimeArchiveError("runtime-archive.history-mismatch", "运行存档转换历史不完整。");
   }
-  return createRuntimeArchive(state);
+  return Object.freeze({ ...parsed, state }) as unknown as RuntimeArchiveEnvelope;
 }
 
 export function restoreRuntimeArchive(envelope: RuntimeArchiveEnvelope): UniverseState {

@@ -1,0 +1,74 @@
+.observation-workbench,
+.research-notebook,
+.research-notebook section {
+  display: grid;
+  gap: 14px;
+}
+
+.observation-methods {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.observation-methods button {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+}
+
+.observation-methods button.active,
+.observation-methods button[aria-pressed="true"] {
+  border-color: #7fc9af;
+  background: #1d2b27;
+}
+
+.observation-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.observation-signal,
+.research-notebook article,
+.research-notebook section {
+  padding: 14px;
+  border: 1px solid rgba(244, 239, 230, 0.12);
+  border-radius: 8px;
+  background: #211d1a;
+}
+
+.observation-signal {
+  display: grid;
+  gap: 10px;
+}
+
+.observation-signal label,
+.research-notebook label {
+  display: grid;
+  gap: 6px;
+}
+
+.research-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.research-summary article {
+  display: grid;
+  gap: 5px;
+}
+
+.research-notebook textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+@media (max-width: 760px) {
+  .observation-methods,
+  .research-summary {
+    grid-template-columns: 1fr;
+  }
+}

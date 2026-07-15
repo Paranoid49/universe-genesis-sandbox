@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   advanceUniverseState,
   configureUniverseClock,
-  createInitialUniverseState,
+  createLegacyInitialUniverseState as createInitialUniverseState,
   createRuntimeArchive,
 } from "../../src/sim";
 import { browserRuntimeStorage, createMemoryRuntimeStorage } from "../../src/ui/runtimeStorage";
@@ -13,7 +13,7 @@ describe("步骤 2 运行存档适配器", () => {
     const first = createRuntimeArchive(advanceUniverseState(createInitialUniverseState({ seed: "STORAGE-001", templateId: "hard_science" })));
     const second = createRuntimeArchive(advanceUniverseState(createInitialUniverseState({ seed: "STORAGE-002", templateId: "high_magic" })));
 
-    expect(storage.storageVersion).toBe("ugs-runtime-storage@1");
+    expect(storage.storageVersion).toBe("ugs-runtime-storage@5");
     await expect(storage.migrate()).resolves.toBeUndefined();
     await storage.put(second);
     await storage.put(first);
@@ -64,7 +64,7 @@ describe("步骤 2 运行存档适配器", () => {
     Object.defineProperty(globalThis, "indexedDB", { configurable: true, value: createIndexedDbStub() });
     try {
       const archive = createRuntimeArchive(advanceUniverseState(createInitialUniverseState({ seed: "STORAGE-INDEXEDDB-001", templateId: "mythic" })));
-      expect(browserRuntimeStorage.storageVersion).toBe("ugs-runtime-storage@1");
+      expect(browserRuntimeStorage.storageVersion).toBe("ugs-runtime-storage@5");
       await expect(browserRuntimeStorage.migrate()).resolves.toBeUndefined();
       await browserRuntimeStorage.put(archive);
       expect(await browserRuntimeStorage.get(archive.stateId)).toEqual(archive);

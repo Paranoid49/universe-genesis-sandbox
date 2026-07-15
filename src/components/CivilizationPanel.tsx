@@ -1,5 +1,5 @@
 import { ScrollText, Sparkles, UsersRound } from "./icons";
-import { useMemo, useState } from "react";
+import { useMemo, useState } from "preact/hooks";
 import type { Civilization, UniverseSummary } from "../sim";
 import { civilizationEventTypeName, civilizationFateName, civilizationPathName, mythologyTypeName, signed, speciesTypeName } from "../ui/labels";
 import type { CivilizationStats } from "../ui/selectors";
@@ -77,7 +77,6 @@ export function CivilizationPanel({
                   className={civilization.id === selectedCivilization.id ? "civilization-select active" : "civilization-select"}
                   type="button"
                   onClick={() => onSelectCivilization(civilization)}
-                  title={`查看${civilization.name}`}
                 >
                   <span>
                     <Sparkles size={15} />

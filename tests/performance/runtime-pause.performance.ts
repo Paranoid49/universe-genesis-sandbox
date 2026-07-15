@@ -4,7 +4,7 @@ import { act, renderHook, waitFor } from "@testing-library/preact";
 import { describe, expect, it } from "vitest";
 import type { SimulationSpeed, UniverseTemplateId } from "../../src/sim";
 import { createMemoryRuntimeStorage } from "../../src/ui/runtimeStorage";
-import { useRuntimeUniverseModel } from "../../src/ui/useRuntimeUniverseModel";
+import { useLegacyRuntimeUniverseModel as useRuntimeUniverseModel } from "../../src/ui/useLegacyRuntimeUniverseModel";
 
 const PAUSE_BUDGET_MS = 100;
 const scenarios: readonly { seed: string; templateId: UniverseTemplateId; speed: SimulationSpeed }[] = [
@@ -39,10 +39,11 @@ describe("步骤 2 暂停调度性能", () => {
 });
 
 async function measurePause(input: { seed: string; templateId: UniverseTemplateId; speed: SimulationSpeed }) {
+  const storage = createMemoryRuntimeStorage();
   const view = renderHook(() => useRuntimeUniverseModel({
     seed: input.seed,
     templateId: input.templateId,
-    storage: createMemoryRuntimeStorage(),
+    storage,
   }));
   act(() => view.result.current.changeSpeed(input.speed));
   act(() => view.result.current.toggleRunning());

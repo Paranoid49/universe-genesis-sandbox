@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   advanceUniverseState,
-  createInitialUniverseState,
+  createLegacyInitialUniverseState as createInitialUniverseState,
   createRuntimeArchive,
   parseRuntimeArchive,
   serializeRuntimeArchive,

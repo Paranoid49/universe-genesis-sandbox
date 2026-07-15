@@ -3,14 +3,14 @@ import {
   serializeRuntimeArchive,
   type RuntimeArchiveEnvelope,
   type RuntimeStorageAdapter,
-} from "../sim";
+} from "../sim/current";
 
-export const RUNTIME_DATABASE_NAME = "ugs.runtime.v1";
+export const RUNTIME_DATABASE_NAME = "ugs.runtime.v5";
 export const RUNTIME_DATABASE_VERSION = 1;
-export const RUNTIME_STORAGE_VERSION = "ugs-runtime-storage@1";
+export const RUNTIME_STORAGE_VERSION = "ugs-runtime-storage@5";
 const ARCHIVE_STORE = "runtime-archives";
 
-export type { RuntimeStorageAdapter } from "../sim";
+export type { RuntimeStorageAdapter } from "../sim/current";
 
 export type MemoryRuntimeStorageOptions = {
   rejectWrite?: (archive: RuntimeArchiveEnvelope) => boolean;

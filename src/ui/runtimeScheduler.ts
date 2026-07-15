@@ -1,4 +1,4 @@
-import type { SimulationSpeed } from "../sim";
+import type { SimulationSpeed } from "../sim/current";
 
 export type RuntimeStepScheduler = {
   stop: () => void;

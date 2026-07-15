@@ -1,12 +1,11 @@
 import type { UniverseState } from "./contracts/runtime";
 import { runtimeStableSerialize } from "./runtime-integrity";
-import { advanceUniverseState, createInitialUniverseState } from "./runtime-state";
+import { advanceUniverseStateForSemanticReplay, createInitialUniverseState } from "./runtime-state";
 
 export function assertUniverseStateSemantics(state: UniverseState): void {
   let replayed = createInitialUniverseState({
     seed: state.identity.seed,
-    rulesetVersion: state.identity.rulesetVersion,
-    templateId: state.identity.templateId,
+    constitution: state.identity.constitution,
   });
   if (runtimeStableSerialize(replayed.identity) !== runtimeStableSerialize(state.identity)) {
     throw new Error("宇宙运行状态的创世定义与初始状态不一致。");
@@ -20,7 +19,7 @@ export function assertUniverseStateSemantics(state: UniverseState): void {
       consumedInputIds.add(inputId);
       return input;
     });
-    replayed = advanceUniverseState(replayed, inputs);
+    replayed = advanceUniverseStateForSemanticReplay(replayed, inputs);
     if (runtimeStableSerialize(replayed.transitions[index]) !== runtimeStableSerialize(recorded)) {
       throw new Error(`宇宙运行状态第 ${index + 1} 个转换的语义校验失败。`);
     }
@@ -39,6 +38,8 @@ function replayableStateFacts(state: UniverseState) {
     clock: { version: state.clock.version, tick: state.clock.tick, step: state.clock.step },
     rules: state.rules,
     objects: state.objects,
+    topology: state.topology,
+    autonomy: state.autonomy,
     randomStreams: state.randomStreams,
     inputLog: state.inputLog,
     transitions: state.transitions,

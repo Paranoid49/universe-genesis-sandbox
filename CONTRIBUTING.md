@@ -12,6 +12,14 @@
 - [docs/legacy-module-migration.md](docs/legacy-module-migration.md)：旧模块的保留、增强、降级、替换和删除要求。
 - [docs/step-1.md](docs/step-1.md)：当前步骤的因果契约、兼容边界和验收标准。
 - [docs/step-2-freeze.md](docs/step-2-freeze.md)：步骤 2 已冻结的运行时需求、非目标、完成条件、兼容边界和质量要求。
+- [docs/step-3-freeze.md](docs/step-3-freeze.md)：步骤 3 已冻结的观察、研究、主流程隔离和质量要求。
+- [docs/step-3.md](docs/step-3.md)：步骤 3 当前实现、验证证据与待关闭事项。
+- [docs/step-4-freeze.md](docs/step-4-freeze.md)：步骤 4 已冻结的分支、实验、比较、存储和分享要求。
+- [docs/step-4.md](docs/step-4.md)：步骤 4 当前实现、验证证据、兼容边界和评审状态。
+- [docs/step-5-freeze.md](docs/step-5-freeze.md)：步骤 5 已冻结的宇宙宪法、统一规则执行、动态观察、动态干预和质量要求。
+- [docs/step-5.md](docs/step-5.md)：步骤 5 当前实现、协议版本、整改证据和评审状态。
+- [docs/step-6-freeze.md](docs/step-6-freeze.md)：步骤 6 已冻结的自主实体、生命过程、认知、行动、叙述分层和质量要求。
+- [docs/step-6.md](docs/step-6.md)：步骤 6 的实际协议、数据流、兼容边界和验证证据。
 - [docs/architecture.md](docs/architecture.md)：模块边界、依赖方向、生成数据流和测试组织。
 - [docs/quality-gates.md](docs/quality-gates.md)：自动化测试、覆盖率和发布门禁。
 - [docs/non-functional-requirements.md](docs/non-functional-requirements.md)：性能、兼容性、可靠性和无障碍要求。
@@ -22,7 +30,7 @@
 
 `CONTRIBUTING.md` 本身也受 [旧产品模块迁移矩阵](docs/legacy-module-migration.md) 约束。步骤 2 至步骤 7 替换 current-only 分享、`timelineImpact`、文明种子、固定奇迹、I1 或 A1 等旧能力时，必须在同一步骤同步删除或改写本文中的旧基线规则，不能让已经退役的约束继续指导新实现。
 
-当前步骤 1 和步骤 2 已完成，步骤 2 第三轮有限复查确认有效 P0、P1 已关闭、P2 均已明确处置。步骤 3 验收基线已经冻结，尚未实现；不得提前实现分支、多本体、自主实体或创作导出。
+当前步骤 1 至步骤 6 已完成，步骤 6 首次独立评审问题经过三轮有限复查全部关闭；不得提前实现步骤 7 创作导出。
 
 ## 本地开发
 
@@ -60,11 +68,15 @@ src/sim/random      Seed、PRNG、命名随机流与精确决策追踪
 src/sim/causality*  因果装配、查询、投影、校验与运行时冻结
 src/sim/causal-comparison 跨宇宙比较组合证据与左右图完整性校验
 src/sim/runtime-*  步骤 2 状态、时钟、随机恢复、差异事件、历史、运行因果和存档
-src/sim/templates   旧基线宇宙模板与短码，步骤 5 由宇宙宪法预设替换
-src/sim/laws        旧固定领域法则兼容实现，步骤 5 由可组合规则引擎替换
-src/sim/metrics     旧固定指标兼容实现，只在隔离兼容视图使用；步骤 3、5 继续替换观察与动态指标
+src/sim/constitution-* 步骤 5 宇宙宪法目录、校验、执行、投影与跨宇宙比较
+src/sim/autonomy* 步骤 6 主体形成、有限认知、意图、行动、关系、叙述与完整性校验
+src/sim/contracts/autonomy* 步骤 6 自主运行协议与宪法策略声明
+src/sim/runtime-topology 步骤 5 宪法驱动的运行关系状态
+src/sim/templates   旧基线宇宙模板与短码，只在隔离兼容路径使用
+src/sim/laws        旧固定领域法则兼容实现，只在隔离兼容路径使用
+src/sim/metrics     旧固定指标兼容实现，只在隔离兼容视图使用
 src/sim/timeline    旧预制纪元事件兼容实现，只在隔离兼容视图使用；运行历史由 `runtime-events.ts` 产生
-src/sim/galaxies    旧传统空间样本兼容实现；运行主流程使用持久对象，步骤 5 再泛化空间拓扑
+src/sim/galaxies    旧传统空间样本兼容实现；当前运行主流程使用宪法驱动的对象与拓扑关系
 src/sim/civilizations 旧文明、神话与预制历史兼容实现，步骤 6 由自主实体替换
 src/sim/content     旧基线展示素材池，不得继续作为新运行时的事实或历史来源
 src/sim/contracts   稳定跨模块数据契约

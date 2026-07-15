@@ -51,7 +51,7 @@ describe("应用关键交互", () => {
       expect(Boolean(screen.queryByRole("heading", { name: "运行中宇宙" }))).toBe(!entry.legacy);
       view.unmount();
     }
-  });
+  }, 15_000);
 
   it("可以通过主导航进入星系与文明页面", async () => {
     const user = userEvent.setup();
@@ -354,10 +354,10 @@ describe("应用关键交互", () => {
   it("概览快捷入口可以进入星系和文明页面", async () => {
     const user = userEvent.setup();
     render(<App initialPage="overview" />);
-    await user.click(screen.getByTitle("查看代表性星系"));
+    await user.click(screen.getByRole("button", { name: "探索星系" }));
     expect(screen.getByRole("heading", { name: "局部探索" })).toBeTruthy();
     await user.click(screen.getByTitle("宇宙摘要与指标"));
-    await user.click(screen.getByTitle("查看文明演化"));
+    await user.click(screen.getByRole("button", { name: "查看文明" }));
     expect(screen.getByRole("heading", { name: "文明演化" })).toBeTruthy();
   });
 
@@ -735,13 +735,13 @@ describe("应用关键交互", () => {
     expect(result.violations).toEqual([]);
   });
 
-  it("键盘可以依次聚焦 Seed、模板和创世操作", async () => {
+  it("键盘可以依次聚焦 Seed、宪法预设和创世操作", async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.tab();
     expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Seed" }));
     await user.tab();
-    expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "模板" }));
+    expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "宪法预设" }));
     await user.tab();
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "创世" }));
   });

@@ -21,6 +21,7 @@ export function freezeCausalGraph(graph: CausalGraph): CausalGraph {
     Object.freeze(authorization);
   });
   graph.randomTrace.streams.forEach((stream) => {
+    if (Object.isFrozen(stream)) return;
     stream.decisions.forEach((decision) => {
       if (decision.parameters.kind === "pick") Object.freeze(decision.parameters.candidates);
       if (decision.parameters.kind === "weighted") {

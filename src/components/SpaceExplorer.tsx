@@ -55,7 +55,6 @@ export function SpaceExplorer({
                 className={galaxy.id === selectedGalaxy.id ? "space-select active" : "space-select"}
                 type="button"
                 onClick={() => onSelectGalaxy(galaxy)}
-                title={`查看${galaxy.name}`}
               >
                 <span>
                   <Orbit size={15} />
@@ -80,7 +79,6 @@ export function SpaceExplorer({
                 className={system.id === selectedSystem.id ? "space-select active" : "space-select"}
                 type="button"
                 onClick={() => onSelectSystem(system)}
-                title={`查看${system.name}`}
               >
                 <span>
                   <Sparkles size={15} />
@@ -101,7 +99,6 @@ export function SpaceExplorer({
                 className={planet.id === selectedPlanet.id ? "space-select active" : "space-select"}
                 type="button"
                 onClick={() => onSelectPlanet(planet)}
-                title={`查看${planet.name}`}
               >
                 <span>
                   <Sprout size={15} />

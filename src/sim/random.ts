@@ -6,6 +6,7 @@ import type {
   RandomTraceSnapshot,
 } from "./contracts/random";
 import { cloneDecisionParameters } from "./random-decision-parameters";
+import { freezeRandomTraceSnapshot } from "./random-freeze";
 
 export type { RandomDecisionOperation, RandomDecisionParameters, RandomDecisionRecord, RandomStreamMetadata, RandomTraceSnapshot } from "./contracts/random";
 
@@ -276,14 +277,14 @@ function snapshotTrace(trace: MutableRandomTrace): RandomTraceSnapshot {
   const streams = trace.streams
     .map((record) => snapshotStream(record, trace.seedFingerprint))
     .sort((left, right) => left.streamId.localeCompare(right.streamId));
-  return {
+  return freezeRandomTraceSnapshot({
     algorithmVersion: RANDOM_ALGORITHM_VERSION,
     generationId: trace.generationId,
     seedMaterial: trace.seedMaterial,
     seedFingerprint: trace.seedFingerprint,
     totalSamples: streams.reduce((sum, stream) => sum + stream.sampleCount, 0),
     streams,
-  };
+  });
 }
 
 export function clamp(value: number, min = 0, max = 100): number {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from "preact/hooks";
 import { LegacyApplication } from "./components/LegacyApplication";
 import { RuntimeApplication } from "./components/RuntimeApplication";
 import { decodeShareParams, type UniverseTemplateId } from "./sim";
@@ -33,7 +33,7 @@ export function App({ initialPage = "runtime", search }: AppProps = {}) {
   }
 
   return <>
-    {runtimeMounted && <RuntimeApplication active={!legacyOpen} onOpenLegacy={openLegacy} />}
+    {runtimeMounted && <RuntimeApplication active={!legacyOpen} onOpenLegacy={(seed) => openLegacy(seed, "hard_science")} />}
     {legacyOpen && <LegacyApplication
       initialPage={legacyPage}
       search={resolvedSearch}

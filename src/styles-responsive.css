@@ -63,6 +63,9 @@
 }
 
 @media (max-width: 720px) {
+  .constitution-creator {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .app-shell {
     width: min(100vw - 18px, 680px);
     padding-top: 10px;
@@ -144,6 +147,28 @@
 
   .page-navigation button {
     width: 96px;
+  }
+
+  .page-navigation[aria-label="主页面导航"] {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    overflow-x: visible;
+    padding: 4px;
+  }
+
+  .page-navigation[aria-label="主页面导航"] button {
+    width: auto;
+    min-width: 0;
+    min-height: 36px;
+    padding: 4px 2px;
+    font-size: 0.72rem;
+    text-align: center;
+  }
+
+  .page-navigation[aria-label="主页面导航"] svg,
+  .page-navigation[aria-label="主页面导航"] .app-icon {
+    display: none;
   }
 
   .overview-band {

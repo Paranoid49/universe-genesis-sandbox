@@ -41,9 +41,27 @@ export {
 export { createRuntimeRandomStream, RUNTIME_RANDOM_ALGORITHM_VERSION } from "./runtime-random";
 export type { RuntimeRandomStream } from "./runtime-random";
 export { advanceUniverseState, configureUniverseClock, createInitialUniverseState, runtimeStateFingerprint } from "./runtime-state";
+export { createLegacyInitialUniverseState } from "./runtime-state-legacy";
 export { assertUniverseStateSemantics } from "./runtime-state-validation";
+export { createObservationContext, knowledgeStatusFromEvidence, observationMethods, observeUniverse } from "./observation";
+export { createObservationAccess } from "./observation-access";
+export * from "./contracts/branching";
+export * from "./contracts/branch-persistence";
+export { BranchInputRejection, createExperimentInput, createInterventionInput } from "./branch-inputs";
+export { replayUniverseToTick } from "./branch-replay";
+export { advanceUniverseBranch, branchHistoryHash, branchStateHash, continueSharedUniverseBranch, createCheckpointRootBranch, createRootBranch, forkUniverseBranch, interveneUniverseBranch, isUniverseBranchStateContinuation, receiveSharedUniverseBranch, updateUniverseBranchState, validateBranch } from "./branching";
+export { compareUniverseBranches } from "./branch-comparison";
+export { createBranchArchive, parseBranchArchive, serializeBranchArchive } from "./branch-archive";
+export { BranchPackageError, continueHistoryBranchPackage, createGenesisPackage, createHistoryBranchPackage, parseGenesisPackage, parseHistoryBranchPackage, receiveHistoryBranchPackage, serializeSharePackage } from "./branch-packages";
+export { buildKnowledgeQuestions } from "./knowledge-questions";
+export { validateObservableSignal } from "./observation-identity";
+export * from "./contracts/observation";
+export * from "./contracts/research";
+export { createResearchArchive, createResearchNotebook, parseResearchArchive, researchNotebookId, serializeResearchArchive } from "./research-archive";
+export { migrateResearchNotebookToHistory } from "./research-migration";
 export { restoreUniverseState } from "./runtime-state";
 export type { CreateUniverseStateInput } from "./runtime-state";
+export type { LegacyCreateUniverseStateInput } from "./runtime-state-legacy";
 export { projectRuntimeEvents } from "./runtime-events";
 export { runtimeObjectAtTick } from "./runtime-history";
 export {
@@ -122,6 +140,78 @@ export type {
 export { UniverseInputError } from "./errors";
 export { assertGenerateUniverseInput } from "./validation";
 export { RULESET_SHORT_CODE, RULESET_VERSION } from "./types";
+export {
+  CONSTITUTION_MODULE_VERSION,
+  CONSTITUTION_PROTOCOL_VERSION,
+  RULE_EXECUTOR_VERSION,
+} from "./contracts/constitution";
+export type {
+  ActionModuleSpec,
+  AttributeDefinition,
+  BoundaryModuleSpec,
+  CognitionModuleSpec,
+  ConstitutionModule,
+  ConstitutionModuleCategory,
+  ConstitutionModuleSpec,
+  ConstitutionValidationIssue,
+  ConstitutionValue,
+  ConstraintModuleSpec,
+  DeclarativeRule,
+  EventModuleSpec,
+  InterventionCapability,
+  InterventionModuleSpec,
+  MetricDefinition,
+  NumericOperator,
+  ObservableMethodDefinition,
+  ObservableModuleSpec,
+  OntologyModuleSpec,
+  PriorityModuleSpec,
+  RuleCondition,
+  RuleConditionRecord,
+  RuleConstraintRecord,
+  RuleCost,
+  RuleCostRecord,
+  RuleEffect,
+  RuleExecutionRecord,
+  RuleExecutionResult,
+  RuleRandomDecision,
+  RuleRandomSource,
+  TimeModuleSpec,
+  TopologyModuleSpec,
+  AutonomousActionDefinition,
+  AutonomousEntityPolicy,
+  AutonomousNarrativeDefinition,
+  AutonomousPerceptionDefinition,
+  UniverseConstitution,
+  ConstitutionDifference,
+  ConstitutionWorldObject,
+} from "./contracts/constitution";
+export { executeConstitutionStep } from "./constitution-executor";
+export { constitutionTimeLabel } from "./constitution-projections";
+export {
+  assertUniverseConstitution,
+  constitutionModule,
+  createConstitutionModule,
+  createUniverseConstitution,
+  REQUIRED_CONSTITUTION_CATEGORIES,
+  validateUniverseConstitution,
+} from "./constitution-validation";
+export {
+  ARCANE_WEAVE,
+  COMPOSED_REFERENCE_CONSTITUTION,
+  CONSTITUTION_MODULE_CATALOG,
+  DREAM_FLUX,
+  getReferenceConstitution,
+  MATERIAL_EXPANSE,
+  LIVING_TIDE,
+  PRODUCT_CONSTITUTIONS,
+  REFERENCE_CONSTITUTIONS,
+} from "./constitution-catalog";
+export * from "./contracts/autonomy";
+export { completeAutonomyStep, createInitialAutonomyState, prepareAutonomyStep } from "./autonomy";
+export { compareUniverseConstitutions } from "./constitution-comparison";
+export type { ConstitutionComparison, ConstitutionModuleDifference } from "./constitution-comparison";
+export type { ConstitutionPresetId } from "./constitution-catalog";
 export type {
   Explanation,
   Biosphere,

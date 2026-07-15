@@ -40,8 +40,8 @@ export function OverviewPage({
         <div><span>标准 Seed</span><strong><ResultValue subjectId="input.seed" label="标准 Seed" strategy="cause" value={universe.seed}>{universe.displaySeed}</ResultValue></strong></div>
         <div><span>分享码</span><strong><ResultValue subjectId="share.code" label="分享码" strategy="cause" value={universe.shareCode}>{universe.shareCode}</ResultValue></strong></div>
         <ResultValue subjectId="share.url" label="分享链接" strategy="cause" value={universe.shareUrl}><a href={universe.shareUrl} title="打开当前宇宙分享链接"><Link size={16} />分享链接</a></ResultValue>
-        <button type="button" onClick={() => onNavigate("space")} title="查看代表性星系"><Telescope size={16} />探索星系</button>
-        <button type="button" onClick={() => onNavigate("civilizations")} title="查看文明演化"><UsersRound size={16} />查看文明</button>
+        <button type="button" onClick={() => onNavigate("space")}><Telescope size={16} />探索星系</button>
+        <button type="button" onClick={() => onNavigate("civilizations")}><UsersRound size={16} />查看文明</button>
       </div>
     </section>
 

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import type { UniverseSummary } from "../sim";
+import { useEffect, useRef, useState } from "preact/hooks";
+import { assertCausalGraph, type UniverseSummary } from "../sim";
 
 export function useShareController(universe: UniverseSummary) {
   const [copyState, setCopyState] = useState("复制分享");
@@ -18,7 +18,7 @@ export function useShareController(universe: UniverseSummary) {
       return;
     }
     try {
-      void universe.causalGraph;
+      assertCausalGraph(universe.causalGraph);
     } catch {
       setCopyState("因果校验失败");
       scheduleCopyStateReset();

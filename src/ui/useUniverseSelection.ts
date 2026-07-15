@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from "preact/hooks";
 import type { Civilization, Galaxy, Planet, StarSystem, UniverseSummary } from "../sim";
 
 export function useUniverseSelection(universe: UniverseSummary) {

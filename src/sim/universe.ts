@@ -1,4 +1,4 @@
-import { buildUniverseCausalGraph } from "./causality";
+import { assertCausalGraph, buildUniverseCausalGraph } from "./causality";
 import type { GenerateUniverseInput, UniverseSummary } from "./types";
 import { generateUniverseData } from "./universe-generation";
 
@@ -25,6 +25,6 @@ export function generateUniverse(input: GenerateUniverseInput): UniverseSummary 
 
 export function generateCausalUniverse(input: GenerateUniverseInput): UniverseSummary {
   const universe = generateUniverse(input);
-  void universe.causalGraph;
+  assertCausalGraph(universe.causalGraph);
   return universe;
 }

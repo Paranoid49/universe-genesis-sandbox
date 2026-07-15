@@ -13,8 +13,8 @@ import { appendCausalProjectionStructure, type CausalProjectionSpec } from "./ca
 import { assertUniverseReplayMatches, generateUniverseData } from "./universe-generation";
 import { buildCausalGraphStructure } from "./causality-build";
 import { assertRandomResultBindingsResolve, randomResultBindingsMatchExpected } from "./causality-random-bindings";
-import { randomTraceMatchesExpected } from "./random-transcript";
 import { isCertifiedStateValueProjectionSpec } from "./state-value-projection";
+import { randomTraceMatchesExpected } from "./random-transcript";
 
 export { getDirectCauses, getDirectEffects, traceCausalAncestors, traceCausalDescendants };
 export type { CausalProjectionSpec };
@@ -32,14 +32,17 @@ export function buildUniverseCausalGraph(
   const replay = generateUniverseData(input, true);
   assertUniverseReplayMatches(initialUniverse, replay.baseSummary);
   const randomTrace = replay.root.getTrace();
-  const expectedRandomTrace = structuredClone(randomTrace);
+  const expectedRandomTrace = Object.isFrozen(randomTrace) ? randomTrace : structuredClone(randomTrace);
   const { graph, expectedRandomBindings } = buildCausalGraphStructure({
     universe: replay.baseSummary,
     randomTrace,
     interventions: input.interventions ?? [],
     generation: replay.generation,
   });
-  if (!randomTraceMatchesExpected(graph.randomTrace, expectedRandomTrace)) {
+  const traceMatches = Object.isFrozen(randomTrace)
+    ? graph.randomTrace === randomTrace
+    : randomTraceMatchesExpected(graph.randomTrace, expectedRandomTrace);
+  if (!traceMatches) {
     throw new Error("因果图随机调用转录与受控重放结果不一致。");
   }
   if (!randomResultBindingsMatchExpected(graph.randomResultBindings, expectedRandomBindings)) {

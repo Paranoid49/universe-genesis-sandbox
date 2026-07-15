@@ -5,7 +5,7 @@ import {
   assertUniverseStateSemantics,
   buildRuntimeCausalNetwork,
   createRuntimeArchive,
-  createInitialUniverseState,
+  createLegacyInitialUniverseState as createInitialUniverseState,
   createRuntimeRandomStream,
   createSimulationClock,
   configureUniverseClock,
@@ -70,7 +70,7 @@ describe("步骤 2 运行时基础契约", () => {
   it("相同初始条件产生完全一致的状态序列", () => {
     let left = createInitialUniverseState({ seed: "STATE-SEQUENCE-001", templateId: "hard_science" });
     let right = createInitialUniverseState({ seed: "STATE-SEQUENCE-001", templateId: "hard_science" });
-    expect(left.identity.version).toBe("ugs-universe-definition@1");
+    expect(left.identity.version).toBe("ugs-universe-definition@4");
     expect(Object.isFrozen(left.identity.initialInputIds)).toBe(true);
     for (let index = 0; index < 8; index += 1) {
       left = advanceUniverseState(left);
@@ -115,18 +115,16 @@ describe("步骤 2 运行时基础契约", () => {
     }
   });
 
-  it("持久空间对象保持身份并从形成状态演化为稳定状态", () => {
+  it("持久对象保持身份并按照宪法持续演化", () => {
     let state = createInitialUniverseState({ seed: "OBJECT-LIFECYCLE-001", templateId: "hard_science" });
     const objectId = Object.keys(state.objects)[0];
     const initialObject = state.objects[objectId];
-    for (let index = 0; index < 8 && state.objects[objectId].status === "forming"; index += 1) {
-      state = advanceUniverseState(state);
-    }
+    for (let index = 0; index < 8; index += 1) state = advanceUniverseState(state);
     const evolvedObject = state.objects[objectId];
 
     expect(evolvedObject.id).toBe(initialObject.id);
     expect(evolvedObject.revision).toBeGreaterThan(0);
-    expect(evolvedObject.status).toBe("stable");
+    expect(evolvedObject.status).toBe(initialObject.status);
     expect(evolvedObject.attributes.cohesion).not.toBe(initialObject.attributes.cohesion);
     expect(state.transitions).toHaveLength(state.clock.step);
 
@@ -147,8 +145,8 @@ describe("步骤 2 运行时基础契约", () => {
     expect(first).toEqual(second);
     expect(first).toHaveLength(state.transitions.length);
     expect(first.every((event) => event.tick <= state.clock.tick)).toBe(true);
-    expect(first.every((event) => event.causeSubjectIds.some((id) => id.startsWith("runtime.rule.")))).toBe(true);
-    expect(first.every((event) => event.causeSubjectIds.some((id) => id.includes("evolution.primary")))).toBe(true);
+    expect(first.every((event) => event.causeSubjectIds.some((id) => id.startsWith("rule.")))).toBe(true);
+    expect(first.every((event) => event.causeSubjectIds.some((id) => id.includes("constitution.evolution")))).toBe(true);
   });
 
   it("历史对象投影不会改写当前状态、输入日志或随机流", () => {
@@ -237,14 +235,14 @@ describe("步骤 2 运行时基础契约", () => {
     expect(Object.isFrozen(parsed.state.transitions[0].differences)).toBe(true);
   });
 
-  it("对象状态发生变化后的运行存档仍能稳定序列化并恢复", () => {
+  it("对象经过多步宪法演化后的运行存档仍能稳定序列化并恢复", () => {
     let state = createInitialUniverseState({ seed: "ARCHIVE-STATUS-CHANGE-001", templateId: "hard_science" });
-    while (Object.values(state.objects)[0].status === "forming") state = advanceUniverseState(state);
+    for (let index = 0; index < 8; index += 1) state = advanceUniverseState(state);
 
     const serialized = serializeRuntimeArchive(createRuntimeArchive(state));
     const parsed = parseRuntimeArchive(serialized);
 
-    expect(Object.values(parsed.state.objects)[0].status).toBe("stable");
+    expect(Object.values(parsed.state.objects)[0].status).toBe(Object.values(state.objects)[0].status);
     expect(serializeRuntimeArchive(parsed)).toBe(serialized);
   });
 
